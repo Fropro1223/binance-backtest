@@ -1,0 +1,22 @@
+# backtest outputs
+data/
+results/
+*.csv
+*.parquet
+*.log
+
+# python
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# virtualenv
+venv/
+.env
+
+# secrets
+credentials/
+google_service_account*.json
+
+# mac
+.DS_Store
