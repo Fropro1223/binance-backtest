@@ -5,6 +5,7 @@ import os
 sys.path.append(os.getcwd())
 
 from conditions.ema_chain import EmaChainConditions
+from conditions.marubozu_pump import MarubozuConditions
 from actions import evaluate_action
 from backtest_framework import BacktestEngine
 from sheets import upload_to_sheets, log_strategy_summary
@@ -23,34 +24,33 @@ def main():
     engine = BacktestEngine(data_dir=DATA_ROOT)
     
     # Run Strategy
-    # === CONFIGURATION (Edit here) ===
-    # Seçenekler: Conditions sınıfı ve Action fonksiyonu
-    SELECTED_CONDITION = EmaChainConditions 
+    # === CONFIGURATION ===
+    # Seçenekler: Conditions sınıfı LİSTESİ ve Action fonksiyonu
+    # Hem EMA hem Marubozu hesabını aktif ediyoruz
+    SELECTED_CONDITIONS = [EmaChainConditions, MarubozuConditions] 
     SELECTED_ACTION = evaluate_action
-    STRATEGY_NAME_LOG = "EMA Chain Conditions + Action Logic" # Loglarda görünecek isim
+    STRATEGY_NAME_LOG = "EMA Chain + Marubozu Modular" 
 
-    MAX_POSITIONS = 1       # Single position per base pair (Pyramid disabled)
-    AVG_THRESHOLD = 0.0     # Ignored when MAX_POSITIONS = 1
-    SL_PCT = 0.04           # 4% Stop Loss
-    TP_PCT = 0.04           # 4% Take Profit
-    BET_SIZE = 7.0          # USDT per position
-
-    # if AVG_THRESHOLD > SL_PCT:
-    #     raise ValueError(f"⚠️ AVG_THRESHOLD ({AVG_THRESHOLD}) cannot be > SL_PCT ({SL_PCT})!")
+    MAX_POSITIONS = 1       
+    AVG_THRESHOLD = 0.0     
+    SL_PCT = 0.04           
+    TP_PCT = 0.04           
+    BET_SIZE = 7.0          
 
     print("------------------------------------------------")
-    print("🐇 STARTING MODULAR BACKTEST")
+    print("🐇 STARTING MODULAR BACKTEST (MULTI-CONDITION)")
     print(f"Strategy: {STRATEGY_NAME_LOG}")
     print(f"TP: {TP_PCT*100}% | SL: {SL_PCT*100}% | Bet: ${BET_SIZE}")
-    print(f"Pyramid: Max {MAX_POSITIONS} | Gap {AVG_THRESHOLD*100}%")
     print("------------------------------------------------")
     
     # Pass strategy parameters here
     results = engine.run(
-        SELECTED_CONDITION,
-        action_func=SELECTED_ACTION, # <--- NEW: Pass action logic separately
+        SELECTED_CONDITIONS, # <--- Pas list of classes
+        action_func=SELECTED_ACTION,
         max_positions=MAX_POSITIONS,
         avg_threshold=AVG_THRESHOLD,
+        pump_threshold=0.02, # MarubozuConditions için
+        marubozu_threshold=0.80, # MarubozuConditions için
         tp=TP_PCT, 
         sl=SL_PCT, 
         bet_size=BET_SIZE,

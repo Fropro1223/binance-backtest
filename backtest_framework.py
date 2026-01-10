@@ -43,13 +43,12 @@ class Strategy(ABC):
 def process_single_pair(args):
     """
     Worker function to process a single parquet file.
-    args: (filepath, strategy_class, check_current_candle, strategy_kwargs)
+    args: (filepath, strategy_classes, check_current_candle, strategy_kwargs)
+    Note: strategy_classes can be a single class or a list of classes.
     """
-    filepath, strategy_class, check_current_candle, strategy_kwargs = args
+    filepath, strategy_classes, check_current_candle, strategy_kwargs = args
     
-    # Extract action_func if provided (it should be passed in strategy_kwargs or handled separately)
-    # Since we pack everything into strategy_kwargs in run(), we need to pop it to avoid init errors
-    # if the Strategy class doesn't expect it.
+    # Extract action_func if provided
     action_func = strategy_kwargs.pop('action_func', None)
     
     try:
@@ -57,7 +56,26 @@ def process_single_pair(args):
         if df.empty: return []
 
         symbol = os.path.basename(filepath).replace('.parquet', '')
-        strategy = strategy_class(**strategy_kwargs)
+        
+        # --- MULTI-CONDITION SUPPORT ---
+        # Ensure strategy_classes is a list
+        if not isinstance(strategy_classes, list):
+            strategy_classes = [strategy_classes]
+            
+        # Instantiate all strategy (condition) classes
+        # We use the FIRST one as the "primary" for getting Bet Size etc.
+        strategies = []
+        for cls in strategy_classes:
+            st = cls(**strategy_kwargs)
+            # OPTIMIZATION: Data Preparation Hook
+            # Har bir stratejiye tüm veriyi gönderip "prep_data" (varsa) çalıştırıyoruz.
+            # Bu sayede indikatörleri loop'tan önce toplu hesaplayabilirler.
+            if hasattr(st, 'prep_data'):
+                st.prep_data(df)
+            strategies.append(st)
+
+            
+        primary_strategy = strategies[0] # Use this for bet_size access
         
         opens = df['open'].values
         highs = df['high'].values
@@ -112,7 +130,7 @@ def process_single_pair(args):
                     else: # LONG
                         pnl_pct = (exit_price - entry_price) / entry_price
                         
-                    pnl_usd = strategy.bet_size * pnl_pct
+                    pnl_usd = primary_strategy.bet_size * pnl_pct
                     
                     completed_trades.append(Trade(
                         symbol=symbol,
@@ -131,15 +149,34 @@ def process_single_pair(args):
                     continue
             
             if not in_position:
-                # 1. Update State (Conditions)
-                # strategy here is actually the "Conditions" instance
-                strategy.on_candle(
-                    timestamp=current_time,
-                    open=opens[i],
-                    high=highs[i],
-                    low=lows[i],
-                    close=closes[i]
-                )
+                # 1. Update State (ALL Conditions)
+                # We collect 'conditions' dict from ALL strategies and merge them
+                merged_conditions = {}
+                
+                for strategy in strategies:
+                    # Run on_candle for indicator updates
+                    # (Some might return trade dicts, but we ignore them if using action_func)
+                    strategy.on_candle(
+                        timestamp=current_time,
+                        open=opens[i],
+                        high=highs[i],
+                        low=lows[i],
+                        close=closes[i]
+                    )
+                    
+                    # Merge conditions if it has them
+                    if hasattr(strategy, 'conditions'):
+                        merged_conditions.update(strategy.conditions)
+                
+                # Create a "Composite" object to pass to actions
+                # It behaves like a strategy instance but has merged conditions
+                class CompositeState:
+                    def __init__(self, conds, base_strat):
+                        self.conditions = conds
+                        self.tp = getattr(base_strat, 'tp', 0.04)
+                        self.sl = getattr(base_strat, 'sl', 0.04)
+                
+                composite_state = CompositeState(merged_conditions, primary_strategy)
                 
                 # 2. Evaluate Decision (Actions)
                 decision = None
@@ -151,7 +188,7 @@ def process_single_pair(args):
                         'low': lows[i],
                         'close': closes[i]
                     }
-                    decision = action_func(strategy, candle_data)
+                    decision = action_func(composite_state, candle_data)
                 
                 if decision:
                     action = decision.get('action')

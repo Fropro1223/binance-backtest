@@ -1,6 +1,13 @@
 from backtest_framework import Strategy
+import pandas as pd
+import numpy as np
 
 class EmaChainConditions(Strategy):
+    """
+    VECTORIZED (Fast) EMA Chain Calculation
+    1. prep_data() ile tüm dosyanın EMA'ları tek seferde hesaplanır.
+    2. on_candle() sadece hazır diziden veri okur.
+    """
     def __init__(self, bet_size=10.0, side="LONG", tp=0.04, sl=0.04, **kwargs):
         super().__init__(bet_size=bet_size)
         
@@ -9,47 +16,60 @@ class EmaChainConditions(Strategy):
         
         # --- 1. EMA AYARLARI ---
         self.periods = [9, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000]
-        # Başlangıçta hepsi boş (None)
-        self.emas = {p: None for p in self.periods}
-        # Hız için çarpanları önceden hesapla: k = 2 / (n + 1)
-        self.multipliers = {p: 2 / (p + 1) for p in self.periods}
-        self.side = side
+
+        # Vektörel veri saklama (Dictionary of Numpy Arrays)
+        self.ema_arrays = {} 
+        self.cursor = 0 # Şu an kaçıncı mumdayız (Array index)
+        self.data_len = 0
 
         # --- 2. KOŞUL DURUMLARI (STATE) ---
-        # Ajanın okuyacağı değişkenler burada saklanır
         self.conditions = {
             'small_bull': False,
             'small_bear': False,
             'big_bull': False,
             'big_bear': False,
-            'all_bull': False,            # (Big Bull + Small Bull)
-            'all_bear': False,            # (Big Bear + Small Bear)
-            'correction_long': False,     # (Big Bull + Small Bear) -> Yükseliş trendinde düzeltme
-            'reaction_short': False       # (Big Bear + Small Bull) -> Düşüş trendinde tepki
+            'all_bull': False,            
+            'all_bear': False,            
+            'correction_long': False,     
+            'reaction_short': False       
         }
 
-    def update_emas(self, close):
-        """Streaming EMA Hesaplaması (Her mumda çalışır)"""
+    def prep_data(self, df: pd.DataFrame):
+        """
+        OPTIMIZATION:
+        Tüm EMA'ları döngüye girmeden önce Pandas ile tek seferde hesapla.
+        """
+        closes = df['close']
+        self.data_len = len(closes)
+        self.cursor = 0
+        
+        # Her periyot için tüm seriyi hesapla
         for p in self.periods:
-            if self.emas[p] is None:
-                self.emas[p] = close
-            else:
-                self.emas[p] = (close - self.emas[p]) * self.multipliers[p] + self.emas[p]
+            # Pandas ewm fonksiyonu C-optimized olduğu için çok hızlıdır
+            ema_series = closes.ewm(span=p, adjust=False, min_periods=p).mean()
+            # Hızlı erişim için numpy array'e çevir ve sakla
+            self.ema_arrays[p] = ema_series.to_numpy()
+            # NaN değerleri None veya -1 yapabiliriz, ama float arrayde NaN kalması daha güvenli
+            # Hesaplama sırasında NaN kontrolü yapacağız.
 
     def _check_bullish_chain(self, periods, i_param):
         """
-        Genel Bullish Zincir Kontrolü:
-        ema[n] > ema[n+1] * (1 + i/100)
+        Hafızadaki array'den o anki (self.cursor) değeri okuyarak kontrol eder.
         """
+        idx_now = self.cursor
+        
         for idx in range(len(periods) - 1):
             fast_p = periods[idx]
             slow_p = periods[idx+1]
             
-            val_fast = self.emas[fast_p]
-            val_slow = self.emas[slow_p]
+            # Array sınır kontrolü (Güvenlik)
+            if idx_now >= len(self.ema_arrays[fast_p]): return False
+
+            val_fast = self.ema_arrays[fast_p][idx_now]
+            val_slow = self.ema_arrays[slow_p][idx_now]
             
-            # None kontrolü (EMA henüz hesaplanmadıysa)
-            if val_fast is None or val_slow is None:
+            # NaN kontrolü (EMA henüz oluşmadıysa)
+            if np.isnan(val_fast) or np.isnan(val_slow):
                 return False
             
             threshold = val_slow * (1 + i_param / 100.0)
@@ -59,19 +79,18 @@ class EmaChainConditions(Strategy):
         return True
 
     def _check_bearish_chain(self, periods, i_param):
-        """
-        Genel Bearish Zincir Kontrolü:
-        ema[n] < ema[n+1] * (1 - i/100)
-        """
+        idx_now = self.cursor
+        
         for idx in range(len(periods) - 1):
             fast_p = periods[idx]
             slow_p = periods[idx+1]
             
-            val_fast = self.emas[fast_p]
-            val_slow = self.emas[slow_p]
+            if idx_now >= len(self.ema_arrays[fast_p]): return False
+
+            val_fast = self.ema_arrays[fast_p][idx_now]
+            val_slow = self.ema_arrays[slow_p][idx_now]
             
-            # None kontrolü
-            if val_fast is None or val_slow is None:
+            if np.isnan(val_fast) or np.isnan(val_slow):
                 return False
             
             threshold = val_slow * (1 - i_param / 100.0)
@@ -81,14 +100,19 @@ class EmaChainConditions(Strategy):
         return True
 
     def on_candle(self, timestamp, open, high, low, close):
-        # 1. EMA'ları Güncelle
-        self.update_emas(close)
-        
-        # En büyük EMA (5000) oluşana kadar hesaplama yapma
-        if self.emas[5000] is None:
+        # Array bounds check
+        if self.cursor >= self.data_len:
             return None
 
-        # --- KOŞUL HESAPLAMALARI ---
+        # En büyük EMA (5000) hazır mı?
+        # (Numpy arrayde o indexteki değer NaN değilse hazırdır)
+        val_5000 = self.ema_arrays[5000][self.cursor]
+        
+        if np.isnan(val_5000):
+            self.cursor += 1
+            return None
+
+        # --- KOŞUL HESAPLAMALARI (Lookup from Array) ---
         
         # Parametreler: i=0.00001 (Small Bull)
         small_bull_periods = [9, 20, 50, 100, 200]
@@ -112,14 +136,12 @@ class EmaChainConditions(Strategy):
         self.conditions['big_bull'] = is_big_bull
         self.conditions['big_bear'] = is_big_bear
         
-        # Kombinasyonlar
         self.conditions['all_bull'] = is_big_bull and is_small_bull
         self.conditions['all_bear'] = is_big_bear and is_small_bear
         self.conditions['correction_long'] = is_big_bull and is_small_bear
         self.conditions['reaction_short'] = is_big_bear and is_small_bull
 
-        # --- LOGIC REMOVED ---
-        # Trading logic is moved to actions.py.
-        # This file only calculates indicators and updates self.conditions
+        # İlerlet
+        self.cursor += 1
         
         return None 
