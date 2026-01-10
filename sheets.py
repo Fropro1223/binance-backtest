@@ -4,6 +4,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 from pathlib import Path
+from datetime import datetime
 
 # System Rule 1 & 2: Credentials Location
 DEFAULT_CREDS_PATH = os.path.expanduser("~/Algo/credentials/google_service_account.json")
@@ -89,7 +90,7 @@ def upload_to_sheets(csv_path_str):
                             tv_interval = interval_raw.upper()
                         
                         # Simple TradingView chart link (no timestamp)
-                        url = f"https://www.tradingview.com/chart/?symbol=BINANCE:{ticker}.P&interval={tv_interval}"
+                        url = f"https://www.tradingview.com/chart/ldW33glX/?symbol=BINANCE:{ticker}.P&interval={tv_interval}"
                         return f'=HYPERLINK("{url}", "{date_label}")'
                     except Exception:
                         return date_label
@@ -335,4 +336,203 @@ def log_strategy_summary(data: dict):
     except Exception as e:
         print(f"❌ Failed to log strategy summary: {e}")
 
+def log_analysis_to_sheet(data: dict):
+    """
+    Logs high-level analysis stats to the 'Analysis' tab of the MANUAL_SHEET_ID.
+    Supports dynamic weekly columns with 2-Row Merged Headers.
+    """
+    try:
+        creds_path = get_credentials_path()
+        if not creds_path.exists():
+            print(f"❌ Credentials not found at {creds_path}")
+            return
 
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_name(str(creds_path), scope)
+        client = gspread.authorize(creds)
+        
+        manual_sheet_id = os.environ.get('MANUAL_SHEET_ID')
+        if not manual_sheet_id:
+            print("❌ MANUAL_SHEET_ID not set. Cannot log analysis.")
+            return
+
+        try:
+            sheet = client.open_by_key(manual_sheet_id)
+        except Exception as e:
+            print(f"❌ Could not open sheet: {e}")
+            return
+
+        # Check/Create 'Analysis' worksheet
+        try:
+            ws = sheet.worksheet("Analysis")
+        except gspread.exceptions.WorksheetNotFound:
+            print("✨ Creating 'Analysis' worksheet...")
+            ws = sheet.add_worksheet(title="Analysis", rows="1000", cols="50")
+            headers_r1 = ["Timestamp", "Strategy", "Win Rate %", "Total Trades", "Total PnL ($)"]
+            ws.update(range_name="A1:E1", values=[headers_r1])
+            ws.freeze(rows=2) # This was moved from later
+        
+        # --- DYNAMIC HEADER LOGIC ---
+        
+        # 1. Update Total PnL Header
+        date_range = data.get('date_range', '')
+        if date_range:
+            pnl_header = f"Total PnL ($)\n{date_range}"
+            ws.update_cell(1, 5, pnl_header)
+        
+        # 2. Handle Weekly Columns
+        headers_r1 = ws.row_values(1)
+        
+        # Row Data Map (New columns will be added here)
+        # 1-based indices
+        row_data = {}
+        row_data[1] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        row_data[2] = data.get('strategy_name', 'Unknown')
+        row_data[3] = float(data.get('win_rate', 0))/100.0
+        row_data[4] = int(data.get('total_trades', 0))
+        row_data[5] = float(data.get('total_pnl', 0))
+        
+        weekly_stats = data.get('weekly_stats', [])
+        new_cols_group = []
+        next_col_idx = len(headers_r1) + 1
+        
+        for week in weekly_stats:
+            label = week['label']
+            trades = week['trades']
+            pnl = week['pnl']
+            
+            # Find Label in Row 1
+            found_col = -1
+            for i, val in enumerate(headers_r1):
+                if val == label:
+                    found_col = i + 1
+                    break
+            
+            if found_col != -1:
+                # Found existing week: Trades at found_col, PnL at found_col+1
+                row_data[found_col] = int(trades)
+                row_data[found_col+1] = float(pnl)
+            else:
+                # New Week
+                current_start = next_col_idx + (len(new_cols_group) * 2)
+                row_data[current_start] = int(trades)
+                row_data[current_start+1] = float(pnl)
+                
+                new_cols_group.append({
+                    'label': label,
+                    'start_col': current_start
+                })
+        
+        # Create Headers for New Weeks
+        if new_cols_group:
+            print(f"✨ Adding {len(new_cols_group)} new weekly header groups...")
+            for group in new_cols_group:
+                c_idx = group['start_col']
+                lbl = group['label']
+                
+                ws.update_cell(1, c_idx, lbl)
+                ws.update_cell(2, c_idx, "Trades")
+                ws.update_cell(2, c_idx+1, "PnL")
+                
+                # Merge Row 1
+                start_a1 = gspread.utils.rowcol_to_a1(1, c_idx)
+                end_a1 = gspread.utils.rowcol_to_a1(1, c_idx+1)
+                ws.merge_cells(f"{start_a1}:{end_a1}")
+                
+                # Format Label
+                ws.format(start_a1, {
+                    "textFormat": {"bold": True},
+                    "horizontalAlignment": "CENTER",
+                    "verticalAlignment": "MIDDLE"
+                })
+                # Format Sub-headers
+                sub_rn = f"{gspread.utils.rowcol_to_a1(2, c_idx)}:{gspread.utils.rowcol_to_a1(2, c_idx+1)}"
+                ws.format(sub_rn, {
+                     "textFormat": {"bold": True, "italic": True},
+                     "horizontalAlignment": "CENTER"
+                })
+
+        # Insert Data (At Row 3)
+        max_idx = max(row_data.keys())
+        final_values = [""] * max_idx
+        for k, v in row_data.items():
+            final_values[k-1] = v
+            
+        ws.insert_row(final_values, index=3)
+        
+        # --- FORMATTING & CF (Row 3+) ---
+        ws.freeze(rows=2)
+        
+        # Hide Timestamp
+        try:
+            sheet.batch_update({
+            "requests": [{"updateDimensionProperties": {
+                "range": {"sheetId": ws.id, "dimension": "COLUMNS", "startIndex": 0, "endIndex": 1},
+                "properties": {"hiddenByUser": True},
+                "fields": "hiddenByUser"
+            }}]
+            })
+        except: pass
+
+        # Static Formats (Row 3 to End)
+        ws.format("C3:C1000", {"numberFormat": {"type": "PERCENT", "pattern": "0.00%"}, "horizontalAlignment": "CENTER"})
+        ws.format("D3:D1000", {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT"}) 
+        ws.format("E3:E1000", {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT"})
+
+        # PnL CF Rules
+        cf_requests = []
+        def create_pnl_rule(col_idx):
+            return [
+                {
+                    "addConditionalFormatRule": {
+                        "rule": {
+                            "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "startColumnIndex": col_idx-1, "endColumnIndex": col_idx}],
+                            "booleanRule": {
+                                "condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]},
+                                "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}
+                            }
+                        },
+                        "index": 0
+                    }
+                },
+                {
+                    "addConditionalFormatRule": {
+                        "rule": {
+                            "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "startColumnIndex": col_idx-1, "endColumnIndex": col_idx}],
+                            "booleanRule": {
+                                "condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]},
+                                "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}
+                            }
+                        },
+                        "index": 1
+                    }
+                }
+            ]
+        
+        cf_requests.extend(create_pnl_rule(5)) # Total PnL
+        
+        # Weekly Columns Formats
+        headers_r2_final = ws.row_values(2)
+        for i, val in enumerate(headers_r2_final):
+            c_idx = i + 1
+            if c_idx <= 5: continue
+            
+            rng = f"{gspread.utils.rowcol_to_a1(3, c_idx)}:{gspread.utils.rowcol_to_a1(1000, c_idx)}"
+            
+            if val == "Trades":
+                ws.format(rng, {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT"})
+            elif val == "PnL":
+                ws.format(rng, {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT"})
+                cf_requests.extend(create_pnl_rule(c_idx))
+
+        # Send Batch CF
+        if cf_requests:
+            try:
+                sheet.batch_update({"requests": cf_requests})
+            except Exception: pass
+            
+        ws.columns_auto_resize(0, len(headers_r2_final))
+        print(f"✅ Analysis logged to '{sheet.title}' -> 'Analysis' (Row 3, Merged Headers)")
+
+    except Exception as e:
+        print(f"❌ Failed to log analysis summary: {e}")

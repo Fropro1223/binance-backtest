@@ -18,11 +18,14 @@ class PumpShortStrategy(Strategy):
             # because we are placing a limit order or market entering as soon as it crosses.
             entry_price = threshold_price
             
+            pump_at_close = (close - open) / open if open != 0 else 0
+            
             return {
                 'action': 'SHORT',
                 'entry_price': entry_price,
                 'tp': entry_price * (1 - self.tp),
-                'sl': entry_price * (1 + self.sl)
+                'sl': entry_price * (1 + self.sl),
+                'pump_percent': pump_at_close
             }
         
         return None
