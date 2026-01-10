@@ -7,42 +7,21 @@ import time
 sys.path.append(os.getcwd())
 
 from backtest_framework import BacktestEngine
-from strategies.marubozu_pump import MarubozuPumpStrategy
+from conditions.ema_chain import EmaChainConditions
+from actions import evaluate_action
 from sheets import log_analysis_to_sheet
 
 DATA_ROOT = os.path.join(os.getcwd(), "data", "processed")
 
 VALID_CONFIGS = [
-    # --- REGIME A: MOMENTUM IGNITION (Pump > 3%) ---
-    {"regime": "A", "pump": 0.03, "side": "LONG", "tp": 0.03, "sl": 0.02, "desc": "Scalp"},
-    {"regime": "A", "pump": 0.03, "side": "LONG", "tp": 0.05, "sl": 0.025, "desc": "Day Trade"},
-    {"regime": "A", "pump": 0.03, "side": "LONG", "tp": 0.09, "sl": 0.03, "desc": "Swing"},
-    {"regime": "A", "pump": 0.03, "side": "LONG", "tp": 0.15, "sl": 0.04, "desc": "Runner"},
-    {"regime": "A", "pump": 0.03, "side": "LONG", "tp": 0.04, "sl": 0.04, "desc": "Safe"},
-    {"regime": "A", "pump": 0.03, "side": "SHORT", "tp": 0.02, "sl": 0.02, "desc": "Scalp"},
-    {"regime": "A", "pump": 0.03, "side": "SHORT", "tp": 0.04, "sl": 0.02, "desc": "Fade"},
-    {"regime": "A", "pump": 0.03, "side": "SHORT", "tp": 0.06, "sl": 0.03, "desc": "Deep Fade"},
-
-    # --- REGIME B: EXPANSION PHASE (Pump > 6%) ---
-    {"regime": "B", "pump": 0.06, "side": "LONG", "tp": 0.06, "sl": 0.03, "desc": "Momentum"},
-    {"regime": "B", "pump": 0.06, "side": "LONG", "tp": 0.12, "sl": 0.04, "desc": "Aggressive"},
-    {"regime": "B", "pump": 0.06, "side": "LONG", "tp": 0.18, "sl": 0.05, "desc": "Moonshot"},
-    {"regime": "B", "pump": 0.06, "side": "LONG", "tp": 0.05, "sl": 0.05, "desc": "Conservative"},
-    {"regime": "B", "pump": 0.06, "side": "LONG", "tp": 0.10, "sl": 0.06, "desc": "Wide Stop"},
-    {"regime": "B", "pump": 0.06, "side": "SHORT", "tp": 0.03, "sl": 0.015, "desc": "Quick Reversal"},
-    {"regime": "B", "pump": 0.06, "side": "SHORT", "tp": 0.06, "sl": 0.03, "desc": "Correction"},
-    {"regime": "B", "pump": 0.06, "side": "SHORT", "tp": 0.12, "sl": 0.04, "desc": "Crash"},
-    {"regime": "B", "pump": 0.06, "side": "SHORT", "tp": 0.05, "sl": 0.05, "desc": "Safety"},
-
-    # --- REGIME C: CLIMAX / EXTREMES (Pump > 10%) ---
-    {"regime": "C", "pump": 0.10, "side": "LONG", "tp": 0.05, "sl": 0.03, "desc": "Scalp Context"},
-    {"regime": "C", "pump": 0.10, "side": "LONG", "tp": 0.20, "sl": 0.10, "desc": "Gamble"},
-    {"regime": "C", "pump": 0.10, "side": "LONG", "tp": 0.50, "sl": 0.15, "desc": "YOLO"},
-    {"regime": "C", "pump": 0.10, "side": "SHORT", "tp": 0.05, "sl": 0.02, "desc": "Sniper"},
-    {"regime": "C", "pump": 0.10, "side": "SHORT", "tp": 0.10, "sl": 0.03, "desc": "Structural"},
-    {"regime": "C", "pump": 0.10, "side": "SHORT", "tp": 0.20, "sl": 0.05, "desc": "Collapse"},
-    {"regime": "C", "pump": 0.10, "side": "SHORT", "tp": 0.08, "sl": 0.04, "desc": "Balanced"},
-    {"regime": "C", "pump": 0.10, "side": "SHORT", "tp": 0.10, "sl": 0.10, "desc": "Safe"},
+    # 1. 4% TP / 4% SL (Symmetric)
+    {"tp": 0.04, "sl": 0.04, "desc": "Symmetric"},
+    
+    # 2. 4% TP / 8% SL (Wide Stop - Survive the Wick)
+    {"tp": 0.04, "sl": 0.08, "desc": "Wide Stop"},
+    
+    # 3. 7% TP / 3% SL (Snipe the Crash - High R:R) (Requested as "3-7 stp -tp")
+    {"tp": 0.07, "sl": 0.03, "desc": "High R:R"},
 ]
 
 def run_batch():
@@ -52,34 +31,29 @@ def run_batch():
 
     engine = BacktestEngine(data_dir=DATA_ROOT)
     
-    print(f"🚀 Starting Grand Batch Matrix ({len(VALID_CONFIGS)} Configs)...")
+    print(f"🚀 Starting Custom Batch (AllBull + Pump + Marubozu) - {len(VALID_CONFIGS)} Variations...")
     print("-------------------------------------------------------------")
     
     for i, cfg in enumerate(VALID_CONFIGS):
-        regime = cfg['regime']
-        pump_thresh = cfg['pump']
-        side = cfg['side']
         tp = cfg['tp']
         sl = cfg['sl']
         desc = cfg['desc']
         
         # Strategy Name for Sheet
-        # e.g. "Regime A [Pump 3%] LONG (Scalp) TP:3% SL:2%"
-        strat_name = f"[{regime}] {side} ({desc}) Pump:{pump_thresh*100:.0f}% TP:{tp*100:.1f}% SL:{sl*100:.1f}%"
+        strat_name = f"[AllBull+Pump+Maru] SHORT ({desc}) TP:{tp*100:.1f}% SL:{sl*100:.1f}%"
         
         print(f"\n👉 [{i+1}/{len(VALID_CONFIGS)}] Running: {strat_name} ...")
         
         try:
             results = engine.run(
-                MarubozuPumpStrategy,
+                EmaChainConditions,           # Condition Class
+                action_func=evaluate_action,  # Action Function
                 max_positions=1,
                 avg_threshold=0.0,
-                pump_threshold=pump_thresh,     # Dynamic Pump
-                marubozu_threshold=0.80,
                 tp=tp,
                 sl=sl,
                 bet_size=7.0,
-                side=side,
+                side="SHORT",
                 parallel=True,
                 check_current_candle=False,
                 workers=8

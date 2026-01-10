@@ -1,8 +1,11 @@
 from backtest_framework import Strategy
 
 class EmaChainConditions(Strategy):
-    def __init__(self, bet_size=10.0, side="LONG", **kwargs):
+    def __init__(self, bet_size=10.0, side="LONG", tp=0.04, sl=0.04, **kwargs):
         super().__init__(bet_size=bet_size)
+        
+        self.tp = tp
+        self.sl = sl
         
         # --- 1. EMA AYARLARI ---
         self.periods = [9, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000]
