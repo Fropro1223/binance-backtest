@@ -1,7 +1,7 @@
 from backtest_framework import Strategy
 
 class PumpShortStrategy(Strategy):
-    def __init__(self, pump_threshold=0.02, tp=0.04, sl=0.02, bet_size=7.0):
+    def __init__(self, pump_threshold=0.02, tp=0.04, sl=0.02, bet_size=7.0, **kwargs):
         super().__init__(bet_size=bet_size)
         self.pump_threshold = pump_threshold
         self.tp = tp
@@ -25,7 +25,8 @@ class PumpShortStrategy(Strategy):
                 'entry_price': entry_price,
                 'tp': entry_price * (1 - self.tp),
                 'sl': entry_price * (1 + self.sl),
-                'pump_percent': pump_at_close
+                'pump_percent': pump_at_close,
+                'check_current_candle': True
             }
         
         return None

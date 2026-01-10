@@ -1,7 +1,7 @@
 from backtest_framework import Strategy
 
 class MarubozuPumpStrategy(Strategy):
-    def __init__(self, pump_threshold=0.02, marubozu_threshold=0.80, tp=0.04, sl=0.04, bet_size=7.0, side="SHORT"):
+    def __init__(self, pump_threshold=0.02, marubozu_threshold=0.80, tp=0.04, sl=0.04, bet_size=7.0, side="SHORT", **kwargs):
         super().__init__(bet_size=bet_size)
         self.pump_threshold = pump_threshold
         self.marubozu_threshold = marubozu_threshold
@@ -17,6 +17,7 @@ class MarubozuPumpStrategy(Strategy):
         """
         # Avoid division by zero
         if open == 0: return None
+        if (high - low) == 0: return None
         
         body_size = close - open
         total_range = high - low
@@ -28,8 +29,6 @@ class MarubozuPumpStrategy(Strategy):
             return None
 
         # Check Marubozu Condition
-        if total_range == 0: return None 
-        
         marubozu_ratio = abs(body_size) / total_range
         
         if marubozu_ratio < self.marubozu_threshold:

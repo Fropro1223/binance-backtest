@@ -4,8 +4,9 @@ import os
 # Add current directory to path so we can import modules
 sys.path.append(os.getcwd())
 
-from backtest_framework import BacktestEngine
 from strategies.marubozu_pump import MarubozuPumpStrategy
+from strategies.pump_short import PumpShortStrategy
+from strategies.ema_chain import EmaChainConditions
 from sheets import upload_to_sheets, log_strategy_summary
 import pandas as pd
 
@@ -23,6 +24,10 @@ def main():
     
     # Run Strategy
     # === CONFIGURATION (Edit here) ===
+    # Seçenekler: MarubozuPumpStrategy, PumpShortStrategy, EmaChainConditions
+    SELECTED_STRATEGY = EmaChainConditions 
+    STRATEGY_NAME_LOG = "EMA Chain Conditions" # Loglarda görünecek isim
+
     MAX_POSITIONS = 1       # Single position per base pair (Pyramid disabled)
     AVG_THRESHOLD = 0.0     # Ignored when MAX_POSITIONS = 1
     SL_PCT = 0.04           # 4% Stop Loss
@@ -34,18 +39,18 @@ def main():
 
     print("------------------------------------------------")
     print("🐇 STARTING MODULAR BACKTEST")
-    print("Strategy: Marubozu Pump (Short on >2% Pump & 80% Body)")
+    print(f"Strategy: {STRATEGY_NAME_LOG}")
     print(f"TP: {TP_PCT*100}% | SL: {SL_PCT*100}% | Bet: ${BET_SIZE}")
     print(f"Pyramid: Max {MAX_POSITIONS} | Gap {AVG_THRESHOLD*100}%")
     print("------------------------------------------------")
     
     # Pass strategy parameters here
     results = engine.run(
-        MarubozuPumpStrategy,
+        SELECTED_STRATEGY,
         max_positions=MAX_POSITIONS,
         avg_threshold=AVG_THRESHOLD,
         pump_threshold=0.02,
-        marubozu_threshold=0.80,  # 80% Body
+        marubozu_threshold=0.80,  # 80% Body (Sadece Marubozu için)
         tp=TP_PCT, 
         sl=SL_PCT, 
         bet_size=BET_SIZE,
@@ -146,7 +151,7 @@ def main():
     print("☁️  Logging Analysis to Google Sheets...")
     
     summary_data = {
-        'strategy_name': f'Marubozu Pump [SHORT] TP:{TP_PCT*100:.1f}% SL:{SL_PCT*100:.1f}%',
+        'strategy_name': f'{STRATEGY_NAME_LOG} [SHORT] TP:{TP_PCT*100:.1f}% SL:{SL_PCT*100:.1f}%',
         'tp_pct': TP_PCT,
         'sl_pct': SL_PCT,
         'max_pos': MAX_POSITIONS,
