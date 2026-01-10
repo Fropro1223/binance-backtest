@@ -115,24 +115,8 @@ class EmaChainConditions(Strategy):
         self.conditions['correction_long'] = is_big_bull and is_small_bear
         self.conditions['reaction_short'] = is_big_bear and is_small_bull
 
-        # --- İŞLEM MANTIĞI (CUSTOM TRIGGER) ---
-        # Kullanıcı İsteği: "All Bull ise ve Pump > %2 ise SHORT aç"
-        # Mantık: Çok güçlü yükseliş trendinde (All Bull) ani bir pump (%2) gelince 
-        # düzeltme (mean reversion) ihtimaline oynayan bir Short stratejisi.
-        
-        # 1. Pump Hesapla (Bu mumdaki değişim)
-        pump_pct = (close - open) / open if open != 0 else 0
-        
-        # 2. Kondisyon Kontrolü
-        if self.conditions['all_bull'] and pump_pct > 0.02:
-             return {
-                 'action': 'SHORT',
-                 'entry_price': close,
-                 # TP/SL main.py'den gelen varsayılanları (self.tp, self.sl) kullanır
-                 # Ancak burada hardcode etmek isterseniz değiştirebilirsiniz.
-                 'tp': close * (1 - 0.04), # %4 TP
-                 'sl': close * (1 + 0.04), # %4 SL
-                 'pump_percent': pump_pct
-             }
+        # --- LOGIC REMOVED ---
+        # Trading logic is moved to actions.py.
+        # This file only calculates indicators and updates self.conditions
         
         return None 

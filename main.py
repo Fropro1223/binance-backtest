@@ -4,9 +4,9 @@ import os
 # Add current directory to path so we can import modules
 sys.path.append(os.getcwd())
 
-from strategies.marubozu_pump import MarubozuPumpStrategy
-from strategies.pump_short import PumpShortStrategy
-from strategies.ema_chain import EmaChainConditions
+from conditions.ema_chain import EmaChainConditions
+from actions import evaluate_action
+from backtest_framework import BacktestEngine
 from sheets import upload_to_sheets, log_strategy_summary
 import pandas as pd
 
@@ -24,9 +24,10 @@ def main():
     
     # Run Strategy
     # === CONFIGURATION (Edit here) ===
-    # Seçenekler: MarubozuPumpStrategy, PumpShortStrategy, EmaChainConditions
-    SELECTED_STRATEGY = EmaChainConditions 
-    STRATEGY_NAME_LOG = "EMA Chain Conditions" # Loglarda görünecek isim
+    # Seçenekler: Conditions sınıfı ve Action fonksiyonu
+    SELECTED_CONDITION = EmaChainConditions 
+    SELECTED_ACTION = evaluate_action
+    STRATEGY_NAME_LOG = "EMA Chain Conditions + Action Logic" # Loglarda görünecek isim
 
     MAX_POSITIONS = 1       # Single position per base pair (Pyramid disabled)
     AVG_THRESHOLD = 0.0     # Ignored when MAX_POSITIONS = 1
@@ -46,15 +47,14 @@ def main():
     
     # Pass strategy parameters here
     results = engine.run(
-        SELECTED_STRATEGY,
+        SELECTED_CONDITION,
+        action_func=SELECTED_ACTION, # <--- NEW: Pass action logic separately
         max_positions=MAX_POSITIONS,
         avg_threshold=AVG_THRESHOLD,
-        pump_threshold=0.02,
-        marubozu_threshold=0.80,  # 80% Body (Sadece Marubozu için)
         tp=TP_PCT, 
         sl=SL_PCT, 
         bet_size=BET_SIZE,
-        side="SHORT", # <--- SHORT STRATEGY
+        side="SHORT",
         parallel=True,
         check_current_candle=False 
     )

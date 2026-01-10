@@ -43,9 +43,14 @@ class Strategy(ABC):
 def process_single_pair(args):
     """
     Worker function to process a single parquet file.
-    args: (filepath, strategy_class, strategy_kwargs)
+    args: (filepath, strategy_class, check_current_candle, strategy_kwargs)
     """
     filepath, strategy_class, check_current_candle, strategy_kwargs = args
+    
+    # Extract action_func if provided (it should be passed in strategy_kwargs or handled separately)
+    # Since we pack everything into strategy_kwargs in run(), we need to pop it to avoid init errors
+    # if the Strategy class doesn't expect it.
+    action_func = strategy_kwargs.pop('action_func', None)
     
     try:
         df = pd.read_parquet(filepath)
@@ -126,13 +131,27 @@ def process_single_pair(args):
                     continue
             
             if not in_position:
-                decision = strategy.on_candle(
+                # 1. Update State (Conditions)
+                # strategy here is actually the "Conditions" instance
+                strategy.on_candle(
                     timestamp=current_time,
                     open=opens[i],
                     high=highs[i],
                     low=lows[i],
                     close=closes[i]
                 )
+                
+                # 2. Evaluate Decision (Actions)
+                decision = None
+                if action_func:
+                    candle_data = {
+                        'timestamp': current_time,
+                        'open': opens[i],
+                        'high': highs[i],
+                        'low': lows[i],
+                        'close': closes[i]
+                    }
+                    decision = action_func(strategy, candle_data)
                 
                 if decision:
                     action = decision.get('action')
