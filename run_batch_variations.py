@@ -7,22 +7,48 @@ import time
 sys.path.append(os.getcwd())
 
 from backtest_framework import BacktestEngine
-from conditions.ema_chain import EmaChainConditions
-from actions import evaluate_action
+# from conditions.ema_chain import EmaChainConditions
+# from actions import evaluate_action
+from strategies.polars_ema_chain import PolarsEmaChain
 from sheets import log_analysis_to_sheet
 
 DATA_ROOT = os.path.join(os.getcwd(), "data", "processed")
 
-VALID_CONFIGS = [
-    # 1. 4% TP / 4% SL (Symmetric)
-    {"tp": 0.04, "sl": 0.04, "desc": "Symmetric"},
+
+def generate_configs():
+    configs = []
     
-    # 2. 4% TP / 8% SL (Wide Stop - Survive the Wick)
-    {"tp": 0.04, "sl": 0.08, "desc": "Wide Stop"},
+    sides = ["SHORT", "LONG"]
+    trends = ["BULLISH", "BEARISH"] # "NONE" can be added if needed
+    pumps = [0.02, 0.05] # 2% and 5% pump thresholds
     
-    # 3. 7% TP / 3% SL (Snipe the Crash - High R:R) (Requested as "3-7 stp -tp")
-    {"tp": 0.07, "sl": 0.03, "desc": "High R:R"},
-]
+    tp_sl_pairs = [
+        (0.04, 0.04, "Symmetric"),
+        (0.04, 0.08, "WideStop"),
+        (0.07, 0.03, "HighRR"),
+        (0.02, 0.02, "Scalp"),
+        (0.10, 0.05, "Yolo"),
+    ]
+    
+    for side in sides:
+        for trend in trends:
+            for pump in pumps:
+                for tp, sl, desc in tp_sl_pairs:
+                    # Strategy Name Construction
+                    # e.g. [SHORT] [BULLISH] [Pump:2%] Symmetric
+                    name = f"[{side}] [{trend}] [Pump:{int(pump*100)}%] {desc} (TP:{int(tp*100)}/SL:{int(sl*100)})"
+                    
+                    cfg = {
+                        "side": side,
+                        "trend": trend,
+                        "pump": pump,
+                        "tp": tp,
+                        "sl": sl,
+                        "name": name
+                    }
+                    configs.append(cfg)
+    
+    return configs
 
 def run_batch():
     if not os.path.exists(DATA_ROOT):
@@ -31,38 +57,58 @@ def run_batch():
 
     engine = BacktestEngine(data_dir=DATA_ROOT)
     
-    print(f"🚀 Starting Custom Batch (AllBull + Pump + Marubozu) - {len(VALID_CONFIGS)} Variations...")
+    configs = generate_configs()
+    # Optional: Shuffle or sort? Sequential is better for comparison.
+    # Total: 2 * 2 * 2 * 5 = 40 variations. 
+    # Let's add NONE trend to get more? 
+    # If we add NONE: 2 * 3 * 2 * 5 = 60 variations.
+    # Let's stick to 40 for now, or add NONE for specific cases.
+    # User asked for "50 tane". Let's add 'NONE' trend for just one Pump setting (2%)?
+    
+    # Adding extra variations for 'NONE' trend (Pure Pump)
+    for side in ["SHORT", "LONG"]:
+        for tp, sl, desc in [(0.04, 0.04, "Symmetric"), (0.07, 0.03, "HighRR")]:
+             name = f"[{side}] [NO_EMA] [Pump:2%] {desc} (TP:{int(tp*100)}/SL:{int(sl*100)})"
+             configs.append({
+                "side": side,
+                "trend": "NONE",
+                "pump": 0.02,
+                "tp": tp,
+                "sl": sl,
+                "name": name
+             })
+             
+    print(f"🚀 Starting Grand Batch Backtest - {len(configs)} Variations...")
     print("-------------------------------------------------------------")
     
-    for i, cfg in enumerate(VALID_CONFIGS):
-        tp = cfg['tp']
-        sl = cfg['sl']
-        desc = cfg['desc']
-        
-        # Strategy Name for Sheet
-        strat_name = f"[AllBull+Pump+Maru] SHORT ({desc}) TP:{tp*100:.1f}% SL:{sl*100:.1f}%"
-        
-        print(f"\n👉 [{i+1}/{len(VALID_CONFIGS)}] Running: {strat_name} ...")
+    for i, cfg in enumerate(configs):
+        print(f"\n👉 [{i+1}/{len(configs)}] Running: {cfg['name']} ...")
         
         try:
+            # PolarsEmaChain logic includes the pump threshold hardcoded?
+            # Wait, I need to check if PolarsEmaChain supports variable pump threshold.
+            # I forgot to refactor Pump Threshold in PolarsEmaChain!
+            # It was hardcoded at 0.02.
+            # I will pass 'pump_threshold' to kwargs.
+            
             results = engine.run(
-                EmaChainConditions,           # Condition Class
-                action_func=evaluate_action,  # Action Function
+                PolarsEmaChain,
                 max_positions=1,
                 avg_threshold=0.0,
-                tp=tp,
-                sl=sl,
-                bet_size=7.0,
-                side="SHORT",
+                tp=cfg['tp'],
+                sl=cfg['sl'],
+                bet_size=10.0,
+                side=cfg['side'],
                 parallel=True,
                 check_current_candle=False,
-                workers=8
+                workers=8,
+                # kwargs for Strategy
+                trend=cfg['trend'],
+                pump_threshold=cfg['pump']
             )
             
             if results.empty:
                 print("   ⚠️ No trades.")
-                # We still might want to log '0' to sheet to keep track?
-                # For now just skip.
                 continue
                 
             # Stats
@@ -71,31 +117,29 @@ def run_batch():
             total_pnl = results['pnl_usd'].sum()
             win_rate = (wins/total_trades)*100 if total_trades > 0 else 0
             
-            print(f"   ✅ Done. Trades: {total_trades}, PnL: ${total_pnl:.2f}, WR: {win_rate:.1f}%")
+            print(f"   ✅ Trades: {total_trades}, PnL: ${total_pnl:.2f}, WR: {win_rate:.1f}%")
             
-            # Prepare for Sheet
-            # Weekly Stats
+            # Prepare Sheet Data
             results['entry_time'] = pd.to_datetime(results['entry_time'])
+            start_date = results['entry_time'].min().strftime('%d.%m')
+            end_date = results['entry_time'].max().strftime('%d.%m')
+            date_range = f"({start_date}-{end_date})"
             
-            # Use same standardized logic
-            weekly_groups = results.set_index('entry_time').resample('W-MON')
             weekly_stats = []
-            for w_end, group in weekly_groups:
-                w_start_ts = w_end - pd.Timedelta(days=6)
-                label = f"{w_start_ts.strftime('%d.%m')}-{w_end.strftime('%d.%m')}"
-                
-                if group.empty:
-                    continue
-                else:
-                   weekly_stats.append({
-                        'label': label,
-                        'trades': len(group),
-                        'pnl': group['pnl_usd'].sum()
-                    })
-                
-            # Log
+            if not results.empty:
+                weekly_groups = results.set_index('entry_time').resample('W-MON')
+                for w_end, group in weekly_groups:
+                    w_start_ts = w_end - pd.Timedelta(days=6)
+                    label = f"{w_start_ts.strftime('%d.%m')}-{w_end.strftime('%d.%m')}"
+                    if not group.empty:
+                        weekly_stats.append({
+                            'label': label,
+                            'trades': len(group),
+                            'pnl': group['pnl_usd'].sum()
+                        })
+
             summary = {
-                'strategy_name': strat_name,
+                'strategy_name': cfg['name'],
                 'win_rate': win_rate,
                 'total_trades': total_trades,
                 'total_pnl': total_pnl,
@@ -105,10 +149,14 @@ def run_batch():
             
             log_analysis_to_sheet(summary)
             
+            # Quota Safety Sleep
+            time.sleep(10)
+            
         except Exception as e:
             print(f"❌ Failed run {i+1}: {e}")
             import traceback
             traceback.print_exc()
+            time.sleep(5) # Wait on error too
 
 if __name__ == "__main__":
     run_batch()

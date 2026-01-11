@@ -434,23 +434,32 @@ def log_analysis_to_sheet(data: dict):
                 ws.update_cell(2, c_idx, "Trades")
                 ws.update_cell(2, c_idx+1, "PnL")
                 
-                # Merge Row 1
-                start_a1 = gspread.utils.rowcol_to_a1(1, c_idx)
-                end_a1 = gspread.utils.rowcol_to_a1(1, c_idx+1)
-                ws.merge_cells(f"{start_a1}:{end_a1}")
-                
-                # Format Label
-                ws.format(start_a1, {
-                    "textFormat": {"bold": True},
-                    "horizontalAlignment": "CENTER",
-                    "verticalAlignment": "MIDDLE"
-                })
-                # Format Sub-headers
-                sub_rn = f"{gspread.utils.rowcol_to_a1(2, c_idx)}:{gspread.utils.rowcol_to_a1(2, c_idx+1)}"
-                ws.format(sub_rn, {
-                     "textFormat": {"bold": True, "italic": True},
-                     "horizontalAlignment": "CENTER"
-                })
+                # Merge Row 1 - REMOVED TO PREVENT ERRORS
+                try:
+                    # Write Label in the first cell
+                    ws.update_cell(1, c_idx, lbl)
+                    
+                    # Also write empty string in next cell to be clean
+                    ws.update_cell(1, c_idx+1, "")
+                    
+                    start_a1 = gspread.utils.rowcol_to_a1(1, c_idx)
+                    
+                    # Format Label
+                    ws.format(start_a1, {
+                        "textFormat": {"bold": True},
+                        "horizontalAlignment": "LEFT",
+                        "verticalAlignment": "MIDDLE"
+                    })
+                    # Format Sub-headers
+                    sub_rn = f"{gspread.utils.rowcol_to_a1(2, c_idx)}:{gspread.utils.rowcol_to_a1(2, c_idx+1)}"
+                    ws.format(sub_rn, {
+                         "textFormat": {"bold": True, "italic": True},
+                         "horizontalAlignment": "CENTER"
+                    })
+                except Exception as merge_err:
+                    print(f"⚠️ Warning: Could not format headers for {lbl}: {merge_err}")
+
+
 
         # Insert Data (At Row 3)
         max_idx = max(row_data.keys())

@@ -227,29 +227,97 @@ def process_single_pair(args):
                                     instant_exit = True
                                     exit_price = tp_price
                                     exit_type = "TP_INSTANT"
-                                    pnl_pct = (tp_price - entry_price) / entry_price
-
-                            if instant_exit:
-                                completed_trades.append(Trade(
-                                    symbol=symbol,
-                                    entry_time=str(entry_time),
-                                    exit_time=str(current_time),
-                                    type=exit_type,
-                                    entry_price=entry_price,
-                                    exit_price=exit_price,
-                                    pnl_percent=pnl_pct,
-                                    pnl_usd=strategy.bet_size * pnl_pct,
-                                    duration_min=0,
-                                    pump_percent=entry_pump
-                                ))
-                        
-                        if not instant_exit:
-                            in_position = True
-                            position_side = action
-                        
+        curr_idx = 0
+        max_idx = len(df)
+        
+        tp_pct = strategy.tp
+        sl_pct = strategy.sl
+        bet_size = 7.0 # Fixed for now or passed via args
+        
+        while curr_idx < max_idx:
+            # 1. Find Next Signal
+            # Slice the signal array
+            future_signals = arr_signals[curr_idx:]
+            
+            # Find indices where True
+            true_indices = np.where(future_signals)[0]
+            
+            if len(true_indices) == 0:
+                break # No more signals
+            
+            # Global Index of next signal
+            entry_idx = curr_idx + true_indices[0]
+            
+            # Execute Entry
+            entry_price = arr_close[entry_idx]
+            entry_time = arr_time[entry_idx]
+            
+            tp_price = entry_price * (1 - tp_pct)
+            sl_price = entry_price * (1 + sl_pct)
+            
+            # 2. Find Exit (Scan forward from distinct entry_idx + 1)
+            # We look for: Low <= TP  OR  High >= SL
+            
+            # Optimization: We only check slice [entry_idx + 1 : ]
+            search_slice_high = arr_high[entry_idx+1:]
+            search_slice_low = arr_low[entry_idx+1:]
+            
+            # Find first occurrence indices
+            # SL Hit: High >= SL
+            sl_hits = np.where(search_slice_high >= sl_price)[0]
+            
+            # TP Hit: Low <= TP
+            tp_hits = np.where(search_slice_low <= tp_price)[0]
+            
+            first_sl_idx = sl_hits[0] if len(sl_hits) > 0 else 999999999
+            first_tp_idx = tp_hits[0] if len(tp_hits) > 0 else 999999999
+            
+            if first_sl_idx == 999999999 and first_tp_idx == 999999999:
+                # Never exits (End of Data)
+                # Force close at end? Or ignore?
+                break
+                
+            # Compare which happened first
+            if first_sl_idx <= first_tp_idx:
+                # SL Hit
+                local_exit_idx = first_sl_idx
+                exit_type = "SL"
+                exit_price = sl_price
+                pnl_pct = (entry_price - exit_price) / entry_price # Short logic
+            else:
+                # TP Hit
+                local_exit_idx = first_tp_idx
+                exit_type = "TP"
+                exit_price = tp_price
+                pnl_pct = (entry_price - exit_price) / entry_price # Short logic
+                
+            # Global Exit Index
+            real_exit_idx = (entry_idx + 1) + local_exit_idx
+            exit_time = arr_time[real_exit_idx]
+            
+            pnl_usd = bet_size * pnl_pct
+            
+            completed_trades.append(Trade(
+                symbol=os.path.basename(filepath).replace('.parquet',''),
+                entry_time=str(entry_time),
+                exit_time=str(exit_time),
+                type=exit_type,
+                entry_price=entry_price,
+                exit_price=exit_price,
+                pnl_percent=pnl_pct,
+                pnl_usd=pnl_usd,
+                duration_min=0
+            ))
+            
+            # Resume search AFTER the exit
+            curr_idx = real_exit_idx + 1
+            
         return completed_trades
+
     except Exception as e:
-        # print(f"Error processing {filepath}: {e}")
+        print(f"Error Polars {filepath}: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 class BacktestEngine:
@@ -268,11 +336,20 @@ class BacktestEngine:
             return pd.DataFrame()
 
         import multiprocessing
-        from concurrent.futures import ProcessPoolExecutor
+        from concurrent.futures import ProcessPoolExecutor, as_completed
         
         num_workers = workers if workers else os.cpu_count()
         
-        print(f"🚀 Running Backtest on {len(files)} pairs...")
+        # Determine Worker Function
+        worker_func = process_single_pair
+        desc = "Standard"
+        
+        # Check if strategy supports Polars Turbo Mode
+        if hasattr(strategy_class, 'process_file'):
+            worker_func = process_single_pair_polars
+            desc = "🚀 TURBO (Polars)"
+        
+        print(f"🚀 Running Backtest on {len(files)} pairs ({desc})...")
         if parallel:
              print(f"⚡ Parallel Mode: {num_workers} workers")
         else:
@@ -284,19 +361,34 @@ class BacktestEngine:
         
         if parallel:
             # Prepare arguments for each worker
-            # We pass strategy_kwargs as a dict to be unpacked in the worker
             tasks = [(f, strategy_class, check_current_candle, strategy_kwargs) for f in files]
             
             with ProcessPoolExecutor(max_workers=num_workers) as executor:
-                results = list(executor.map(process_single_pair, tasks))
+                # Submit all tasks
+                futures = [executor.submit(worker_func, t) for t in tasks]
+                results = []
+                
+                total = len(tasks)
+                print(f"⏳ Processing {total} pairs...", flush=True)
+                
+                for i, f in enumerate(as_completed(futures)):
+                    try:
+                        res = f.result()
+                        results.append(res)
+                    except Exception as e:
+                        print(f"❌ Worker Error: {e}")
+                    
+                    # Print progress every 20 items
+                    if (i + 1) % 20 == 0:
+                        pct = ((i + 1) / total) * 100
+                        print(f"   👉 Progress: {i + 1}/{total} ({pct:.1f}%)", flush=True)
                 
             for res in results:
                 all_trades.extend(res)
         else:
             # Serial fallback
             for filepath in files:
-                # We reuse the static logic for serial as well
-                res = process_single_pair((filepath, strategy_class, check_current_candle, strategy_kwargs))
+                res = worker_func((filepath, strategy_class, check_current_candle, strategy_kwargs))
                 all_trades.extend(res)
                 
         print(f"📊 Raw trades before pyramid filter: {len(all_trades)}")
@@ -376,5 +468,133 @@ class BacktestEngine:
         
         return filtered
 
-    # Old serial method removed/replaced by top-level process_single_pair
+    
+# Old serial method removed/replaced by top-level process_single_pair
+
+import polars as pl
+from datetime import timedelta
+
+def process_single_pair_polars(args):
+    """
+    Turbo Worker using Polars for everything.
+    args: (filepath, strategy_class, check_current_candle, strategy_kwargs)
+    """
+    filepath, strategy_class, check_current_candle, strategy_kwargs = args
+    
+    try:
+        # 1. Instantiate Strategy
+        strategy = strategy_class(**strategy_kwargs)
+        
+        if not hasattr(strategy, 'process_file'):
+            return []
+            
+        # 2. Get Data with 'entry_signal' column
+        # Strategy MUST return a Polars DataFrame with 'entry_signal' (bool)
+        df = strategy.process_file(filepath)
+        
+        if df is None or df.is_empty(): return []
+        
+        # Add row number/index for iteration
+        df = df.with_row_count("index")
+        
+        # Convert to Numpy for fast filtering/jumping
+        # We need: index, low, high, open_time, entry_signal, close
+        arr_signals = df['entry_signal'].to_numpy()
+        arr_high = df['high'].to_numpy()
+        arr_low = df['low'].to_numpy()
+        arr_close = df['close'].to_numpy()
+        
+        # Handle Time Column
+        if 'open_time' in df.columns:
+            arr_time = df['open_time'].to_list()
+        elif 'ts_1s' in df.columns:
+            arr_time = df['ts_1s'].to_list()
+        else:
+            # Fallback for unexpected schema
+            arr_time = [str(x) for x in range(len(df))]
+ 
+        
+        completed_trades = []
+        curr_idx = 0
+        max_idx = len(df)
+        
+        tp_pct = strategy.tp
+        sl_pct = strategy.sl
+        bet_size = getattr(strategy, 'bet_size', 7.0)
+        
+        while curr_idx < max_idx:
+            # 1. Find Next Signal
+            future_signals = arr_signals[curr_idx:]
+            true_indices = np.where(future_signals)[0]
+            
+            if len(true_indices) == 0:
+                break # No more signals
+            
+            # Global Index of next signal
+            entry_idx = curr_idx + true_indices[0]
+            
+            # Execute Entry
+            entry_price = arr_close[entry_idx]
+            entry_time = arr_time[entry_idx]
+            
+            tp_price = entry_price * (1 - tp_pct)
+            sl_price = entry_price * (1 + sl_pct)
+            
+            # 2. Find Exit
+            # Scan slice: [entry_idx + 1 : ]
+            if entry_idx + 1 >= max_idx:
+                break
+                
+            search_slice_high = arr_high[entry_idx+1:]
+            search_slice_low = arr_low[entry_idx+1:]
+            
+            # SL Hit: High >= SL
+            sl_hits = np.where(search_slice_high >= sl_price)[0]
+            # TP Hit: Low <= TP
+            tp_hits = np.where(search_slice_low <= tp_price)[0]
+            
+            first_sl_idx = sl_hits[0] if len(sl_hits) > 0 else 999999999
+            first_tp_idx = tp_hits[0] if len(tp_hits) > 0 else 999999999
+            
+            if first_sl_idx == 999999999 and first_tp_idx == 999999999:
+                break # Never exits
+                
+            if first_sl_idx <= first_tp_idx:
+                local_exit_idx = first_sl_idx
+                exit_type = "SL"
+                exit_price = sl_price
+                pnl_pct = (entry_price - exit_price) / entry_price # SHORT logic
+            else:
+                local_exit_idx = first_tp_idx
+                exit_type = "TP"
+                exit_price = tp_price
+                pnl_pct = (entry_price - exit_price) / entry_price # SHORT logic
+                
+            real_exit_idx = (entry_idx + 1) + local_exit_idx
+            exit_time = arr_time[real_exit_idx]
+            
+            pnl_usd = bet_size * pnl_pct
+            
+            completed_trades.append(Trade(
+                symbol=os.path.basename(filepath).replace('.parquet',''),
+                entry_time=str(entry_time),
+                exit_time=str(exit_time),
+                type=exit_type,
+                entry_price=entry_price,
+                exit_price=exit_price,
+                pnl_percent=pnl_pct,
+                pnl_usd=pnl_usd,
+                duration_min=0,
+                pump_percent=0.0 # Can extract if needed
+            ))
+            
+            # Jump to after exit
+            curr_idx = real_exit_idx + 1
+            
+        return completed_trades
+
+    except Exception as e:
+        print(f"Error Polars {filepath}: {e}")
+        return []
+
 
