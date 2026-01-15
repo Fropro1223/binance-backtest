@@ -34,14 +34,14 @@ def evaluate_action(conditions_instance, candle_data):
     
     if state.get('all_bull') and state.get('is_pump') and state.get('is_marubozu'):
         # TP/SL instancedan al
-        tp_rate = getattr(conditions_instance, 'tp', 0.04)
-        sl_rate = getattr(conditions_instance, 'sl', 0.04)
+        tp_rate = getattr(conditions_instance, 'tp', 0.08)
+        sl_rate = getattr(conditions_instance, 'sl', 0.03)
         
         return {
-            'action': 'SHORT',
+            'action': 'LONG',
             'entry_price': close,
-            'tp': close * (1 - tp_rate), 
-            'sl': close * (1 + sl_rate),
+            'tp': close * (1 + tp_rate), 
+            'sl': close * (1 - sl_rate),
             'pump_percent': state.get('pump_percentage', 0.0)
         }
         

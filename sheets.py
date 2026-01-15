@@ -280,8 +280,8 @@ def log_strategy_summary(data: dict):
         print("ℹ️  To use your own sheet, share it with this email.")
 
         # TARGET MASTER SPREADSHEET
-        # User provided ID: https://docs.google.com/spreadsheets/d/1OR8dSej3-5kiOkVzLhRV7EZfMcWeZNNscjSk6z___BI/edit
-        MASTER_SHEET_ID = "1OR8dSej3-5kiOkVzLhRV7EZfMcWeZNNscjSk6z___BI"
+        # User provided backtestmini sheet
+        MASTER_SHEET_ID = "1iQ2-1KN6kwyA3TGgKHTxzN5YCGxJe2ZHPk9V9mtt5WM"
         
         sheet = None
         
@@ -351,13 +351,14 @@ def log_analysis_to_sheet(data: dict):
         creds = ServiceAccountCredentials.from_json_keyfile_name(str(creds_path), scope)
         client = gspread.authorize(creds)
         
+        # Use MANUAL_SHEET_ID env var if set, otherwise fallback to MASTER_SHEET_ID
         manual_sheet_id = os.environ.get('MANUAL_SHEET_ID')
-        if not manual_sheet_id:
-            print("❌ MANUAL_SHEET_ID not set. Cannot log analysis.")
-            return
+        MASTER_SHEET_ID = "1iQ2-1KN6kwyA3TGgKHTxzN5YCGxJe2ZHPk9V9mtt5WM"
+        sheet_id = manual_sheet_id if manual_sheet_id else MASTER_SHEET_ID
 
         try:
-            sheet = client.open_by_key(manual_sheet_id)
+            sheet = client.open_by_key(sheet_id)
+            print(f"✅ Opened Sheet: {sheet.title}")
         except Exception as e:
             print(f"❌ Could not open sheet: {e}")
             return

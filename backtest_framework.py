@@ -227,6 +227,9 @@ def process_single_pair(args):
                                     instant_exit = True
                                     exit_price = tp_price
                                     exit_type = "TP_INSTANT"
+        return completed_trades
+
+        # Dead code below this line (removed/skipped)
         curr_idx = 0
         max_idx = len(df)
         
@@ -334,6 +337,7 @@ class BacktestEngine:
         if not files:
             print("❌ No data files found.")
             return pd.DataFrame()
+
 
         import multiprocessing
         from concurrent.futures import ProcessPoolExecutor, as_completed

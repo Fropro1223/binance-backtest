@@ -6,9 +6,17 @@ class MarubozuConditions(Strategy):
     İşlem açmaz, sadece state günceller.
     """
     def __init__(self, marubozu_threshold=0.80, pump_threshold=0.02, **kwargs):
-        super().__init__(**kwargs)
+        # Extract bet_size for base class
+        bet_size = kwargs.get('bet_size', 7.0)
+        super().__init__(bet_size=bet_size)
+        
         self.marubozu_threshold = marubozu_threshold
         self.pump_threshold = pump_threshold
+        
+        # Store strategy params if needed
+        self.tp = kwargs.get('tp')
+        self.sl = kwargs.get('sl')
+        self.side = kwargs.get('side')
         
         # State
         self.conditions = {
