@@ -15,8 +15,8 @@ def apply_cf():
     
     manual_sheet_id = os.environ.get('MANUAL_SHEET_ID')
     if not manual_sheet_id:
-        print("❌ MANUAL_SHEET_ID not set.")
-        return
+        # Fallback to backtestmini
+        manual_sheet_id = "1iQ2-1KN6kwyA3TGgKHTxzN5YCGxJe2ZHPk9V9mtt5WM"
 
     try:
         sheet = client.open_by_key(manual_sheet_id)

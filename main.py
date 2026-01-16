@@ -76,6 +76,9 @@ def parse_args():
     parser.add_argument('--serial', action='store_true',
                         help='Paralel yerine seri işleme (debug için)')
     
+    parser.add_argument('--tf', type=str, default=None,
+                        help='Timeframe filtresi (örn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
+    
     return parser.parse_args()
 
 
@@ -145,7 +148,8 @@ def main():
         bet_size=BET_SIZE,
         side=SIDE,
         parallel=not args.serial,
-        check_current_candle=check_current_candle
+        check_current_candle=check_current_candle,
+        tf_filter=args.tf
     )
     
     if results.empty:
@@ -182,7 +186,7 @@ def main():
     results.to_csv(results_csv, index=False)
     
     # === WEEKLY BREAKDOWN ===
-    print("📅 Calculating Weekly Stats...")
+    print("📅 Calculating Weekly Stats (Sunday 03:00 - Sunday 03:00)...")
     overall_date_range = ""
     weekly_stats = []
     
@@ -194,12 +198,21 @@ def main():
         end_date = results['entry_time'].max().strftime('%d.%m')
         overall_date_range = f"({start_date}-{end_date})"
         
-        weekly_groups = results.set_index('entry_time').resample('W-MON')
+        # TradingView style: Week starts Sunday 03:00 UTC+3
+        # Shift times by -3 hours so that Sunday 03:00 becomes Sunday 00:00
+        # Then use W-SUN (week ending Sunday) for grouping
+        shifted = results.copy()
+        shifted['week_time'] = results['entry_time'] - pd.Timedelta(hours=3)
+        
+        weekly_groups = shifted.set_index('week_time').resample('W-SUN')
         
         for week_end, group in weekly_groups:
-            w_start_ts = week_end - pd.Timedelta(days=6)
-            w_start = w_start_ts.strftime('%d.%m')
-            w_end_str = week_end.strftime('%d.%m')
+            # week_end is the shifted Sunday 00:00, so real week is Sunday 03:00
+            real_week_end = week_end + pd.Timedelta(hours=3)
+            real_week_start = real_week_end - pd.Timedelta(days=7)
+            
+            w_start = real_week_start.strftime('%d.%m')
+            w_end_str = real_week_end.strftime('%d.%m')
             label = f"{w_start}-{w_end_str}"
             
             if group.empty:
@@ -210,6 +223,9 @@ def main():
                 'trades': len(group),
                 'pnl': group['pnl_usd'].sum()
             })
+        
+        # Reverse order: newest week first
+        weekly_stats = weekly_stats[::-1]
             
     except Exception as e:
         print(f"⚠️ Error calculating weekly stats: {e}")

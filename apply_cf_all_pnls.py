@@ -16,8 +16,8 @@ def apply_cf_batch():
     
     manual_sheet_id = os.environ.get('MANUAL_SHEET_ID')
     if not manual_sheet_id:
-        print("❌ MANUAL_SHEET_ID not set.")
-        return
+        # Fallback to backtestmini
+        manual_sheet_id = "1iQ2-1KN6kwyA3TGgKHTxzN5YCGxJe2ZHPk9V9mtt5WM"
 
     try:
         sheet = client.open_by_key(manual_sheet_id)
@@ -26,15 +26,16 @@ def apply_cf_batch():
         print(f"🎨 Analyzing '{ws.title}' for PnL columns...")
         
         current_headers = ws.row_values(1)
+        row2_headers = ws.row_values(2)
         pnl_col_indices = []
         
-        # 1. Total PnL (Column E, Index 4) - Check header just in case
+        # 1. Total PnL (Column E, Index 4)
         if len(current_headers) >= 5 and "PnL" in current_headers[4]:
              pnl_col_indices.append(4)
         
-        # 2. Weekly PnLs (Headers containing '($)')
-        for i, header in enumerate(current_headers):
-            if "($)" in header:
+        # 2. Weekly PnLs - Look for "PnL" in Row 2 (sub-headers under week labels)
+        for i, header in enumerate(row2_headers):
+            if header == "PnL" and i not in pnl_col_indices:
                 pnl_col_indices.append(i)
                 
         print(f"Found {len(pnl_col_indices)} PnL columns: {pnl_col_indices}")

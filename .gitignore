@@ -2,6 +2,7 @@
 data/
 results/
 *.csv
+*.xlsx
 *.parquet
 *.log
 

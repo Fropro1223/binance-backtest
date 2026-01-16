@@ -332,8 +332,14 @@ class BacktestEngine:
         parts = symbol.split('_')
         return parts[0] if parts else symbol
         
-    def run(self, strategy_class, max_positions=10, avg_threshold=0.10, parallel=True, workers=None, check_current_candle=True, **strategy_kwargs) -> pd.DataFrame:
+    def run(self, strategy_class, max_positions=10, avg_threshold=0.10, parallel=True, workers=None, check_current_candle=True, tf_filter=None, **strategy_kwargs) -> pd.DataFrame:
         files = [os.path.join(self.data_dir, f) for f in os.listdir(self.data_dir) if f.endswith('.parquet')]
+        
+        # Apply timeframe filter if specified
+        if tf_filter:
+            files = [f for f in files if f"_{tf_filter}.parquet" in f]
+            print(f"📂 Timeframe filter: {tf_filter} ({len(files)} files)")
+        
         if not files:
             print("❌ No data files found.")
             return pd.DataFrame()
