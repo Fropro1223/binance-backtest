@@ -21,3 +21,6 @@ google_service_account*.json
 
 # mac
 .DS_Store
+
+# agent workflows
+.agent/
