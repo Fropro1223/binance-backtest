@@ -33,12 +33,12 @@ else
     exit 1
 fi
 
-# Change to data directory
-cd "$DATA_DIR"
+# Change to project directory (src is here, not in data/)
+cd "$PROJECT_DIR"
 
-# Download and process last 7 days of data
-log "Downloading last 7 days of data..."
-python -m src.main --days 7 2>&1 | tee -a "$LOG_FILE"
+# Run Data Manager (Handles Manifest & Logic automatically)
+log "Running Data Manager..."
+python -m src.data_manager 2>&1 | tee -a "$LOG_FILE"
 
 log "=========================================="
 log "Weekly Data Download Complete"

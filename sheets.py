@@ -368,7 +368,7 @@ def log_analysis_to_sheet(data: dict):
             ws = sheet.worksheet("Analysis")
         except gspread.exceptions.WorksheetNotFound:
             print("✨ Creating 'Analysis' worksheet...")
-            ws = sheet.add_worksheet(title="Analysis", rows="1000", cols="50")
+            ws = sheet.add_worksheet(title="Analysis", rows="1000", cols="100")
             headers_r1 = ["Timestamp", "Strategy", "Win Rate %", "Total Trades", "Total PnL ($)"]
             ws.update(range_name="A1:E1", values=[headers_r1])
             ws.freeze(rows=2) # This was moved from later

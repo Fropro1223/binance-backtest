@@ -34,12 +34,20 @@ class VectorizedStrategy(Strategy):
         self.periods = [9, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000]
         
     def process_file(self, filepath):
+        """Legacy wrapper."""
+        try:
+            df = pd.read_parquet(filepath)
+            return self.process_data(df)
+        except Exception:
+            return None
+
+    def process_data(self, df):
         """
         Vectorized processing - returns Polars DataFrame with 'entry_signal' column.
         """
         try:
             # 1. Read with Pandas (for fast EWM)
-            df = pd.read_parquet(filepath)
+            # df is already DataFrame
             if df.empty:
                 return None
 
@@ -99,11 +107,10 @@ class VectorizedStrategy(Strategy):
             
             # 6. COMBINE SIGNALS BASED ON SIDE
             if self.side == "SHORT":
-                # SHORT: All Bull + Pump Up + Marubozu (reaction short after pump in bull trend)
-                final_signal = all_bull & is_pump_up & is_marubozu
+                # SHORT: All Bear + Pump Up + Marubozu (continuation short after pump in bear trend)
+                final_signal = all_bear & is_pump_up & is_marubozu
             else:  # LONG
                 # LONG: All Bull + Pump Up + Marubozu (continuation long in bull trend)
-                # Or could be: All Bear + Pump Down + Marubozu for mean reversion
                 final_signal = all_bull & is_pump_up & is_marubozu
             
             if not final_signal.any():

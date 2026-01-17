@@ -102,8 +102,8 @@ def main():
     AVG_THRESHOLD = args.avg_thresh / 100.0
     SIDE = args.side
     
-    # Build strategy name for logging
-    STRATEGY_NAME_LOG = f"{args.strategy} [{SIDE}] TP:{args.tp}% SL:{args.sl}%"
+    # Build strategy name for logging (includes pump level)
+    STRATEGY_NAME_LOG = f"{args.strategy} [{SIDE}] TP:{args.tp}% SL:{args.sl}% Pump:{args.pump}%"
     
     # === STRATEGY SELECTION ===
     if args.strategy == 'vectorized':

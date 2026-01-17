@@ -52,7 +52,18 @@ def process_single_pair(args):
     action_func = strategy_kwargs.pop('action_func', None)
     
     try:
-        df = pd.read_parquet(filepath)
+        path = args[0] if isinstance(args, tuple) else args
+        # Check if dir
+        import pathlib
+        import polars as pl
+        p = pathlib.Path(filepath)
+        
+        if p.is_dir():
+             # Load directory
+             df = pl.scan_parquet(str(p / "*.parquet")).collect().sort("ts_1s").to_pandas()
+        else:
+             df = pd.read_parquet(filepath)
+
         if df.empty: return []
 
         symbol = os.path.basename(filepath).replace('.parquet', '')
@@ -333,12 +344,40 @@ class BacktestEngine:
         return parts[0] if parts else symbol
         
     def run(self, strategy_class, max_positions=10, avg_threshold=0.10, parallel=True, workers=None, check_current_candle=True, tf_filter=None, **strategy_kwargs) -> pd.DataFrame:
-        files = [os.path.join(self.data_dir, f) for f in os.listdir(self.data_dir) if f.endswith('.parquet')]
+        from pathlib import Path
+        base_path = Path(self.data_dir)
+        raw_path = base_path / "raw"
         
-        # Apply timeframe filter if specified
-        if tf_filter:
-            files = [f for f in files if f"_{tf_filter}.parquet" in f]
-            print(f"📂 Timeframe filter: {tf_filter} ({len(files)} files)")
+        files = [] # This will store paths to "TF Dataset" directories (e.g. raw/BTCUSDT/5s)
+        
+        if raw_path.exists():
+             # New Mode: Iterate symbol directories
+             # Structure: raw/SYMBOL/TF/*.parquet
+             
+             # 1. Get all symbols
+             symbols = [d for d in raw_path.iterdir() if d.is_dir()]
+             
+             for sym_dir in symbols:
+                 # 2. Get all TFs in symbol dir
+                 tfs = [d for d in sym_dir.iterdir() if d.is_dir()]
+                 
+                 for tf_dir in tfs:
+                     tf_name = tf_dir.name # e.g. "5s", "1m"
+                     
+                     if tf_filter and tf_name != tf_filter:
+                         continue
+                         
+                     # Add this dataset directory to processing list
+                     files.append(str(tf_dir))
+                     
+             if tf_filter:
+                 print(f"📂 Timeframe filter applied: {tf_filter}")
+        else:
+             # Legacy Mode
+             files = [os.path.join(self.data_dir, f) for f in os.listdir(self.data_dir) if f.endswith('.parquet')]
+             if tf_filter:
+                files = [f for f in files if f"_{tf_filter}.parquet" in f]
+                print(f"📂 Timeframe filter: {tf_filter} ({len(files)} files)")
         
         if not files:
             print("❌ No data files found.")
@@ -348,7 +387,7 @@ class BacktestEngine:
         import multiprocessing
         from concurrent.futures import ProcessPoolExecutor, as_completed
         
-        num_workers = workers if workers else os.cpu_count()
+        num_workers = workers if workers else 8  # Always use 8 cores by default
         
         # Determine Worker Function
         worker_func = process_single_pair
@@ -495,12 +534,29 @@ def process_single_pair_polars(args):
         # 1. Instantiate Strategy
         strategy = strategy_class(**strategy_kwargs)
         
-        if not hasattr(strategy, 'process_file'):
-            return []
-            
-        # 2. Get Data with 'entry_signal' column
-        # Strategy MUST return a Polars DataFrame with 'entry_signal' (bool)
-        df = strategy.process_file(filepath)
+        # 2. Load Data (Handle Directory or File)
+        import pathlib
+        import polars as pl
+        p = pathlib.Path(filepath)
+        
+        df = None
+        if p.is_dir():
+            # Load directory -> Merge -> Pandas (VectorizedStrategy expects Pandas)
+            # Ensure unique and sorted
+            df_source = pl.scan_parquet(str(p / "*.parquet")).collect().unique(subset=["ts_1s"]).sort("ts_1s").to_pandas()
+            if hasattr(strategy, 'process_data'):
+                df = strategy.process_data(df_source)
+            else:
+                # If strategy only has process_file but we have a dir, we can't help unless we save temp?
+                # Or strategy supports dir?
+                if hasattr(strategy, 'process_file'):
+                     df = strategy.process_file(filepath)
+        else:
+            # File
+            if hasattr(strategy, 'process_file'):
+                df = strategy.process_file(filepath)
+
+        if df is None or df.is_empty(): return []
         
         if df is None or df.is_empty(): return []
         
