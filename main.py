@@ -17,12 +17,9 @@ import argparse
 # Add current directory to path
 sys.path.append(os.getcwd())
 
-from conditions.ema_chain import EmaChainConditions
-from conditions.marubozu_pump import MarubozuConditions
-from conditions.pump_short import PumpShortStrategy
 from conditions.vectorized_strategy import VectorizedStrategy
-from actions import evaluate_action
 from backtest_framework import BacktestEngine
+import pandas as pd
 import pandas as pd
 
 # Use local processed data
