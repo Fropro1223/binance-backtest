@@ -1,8 +1,12 @@
 """
-Vectorized EMA + Pump + Marubozu Strategy
-=========================================
-Polars/Pandas vektörizasyonu ile hızlı backtest.
-Eski turbo_bull.py mantığı, parametreli hale getirildi.
+Vektörel EMA + Pump + Marubozu Stratejisi
+==========================================
+Bu strateji tüm veriyi tek seferde işler (vektörel hesaplama).
+Döngü yerine Pandas/Numpy kullanarak çok hızlı çalışır.
+
+Kullanım:
+- LONG: Boğa trendinde pump sonrası devam
+- SHORT: Ayı trendinde pump sonrası geri dönüş
 """
 
 from backtest_framework import Strategy
@@ -13,121 +17,214 @@ import polars as pl
 
 class VectorizedStrategy(Strategy):
     """
-    Vectorized strategy that combines:
-    - EMA Chain (All Bull or All Bear)
-    - Pump detection (> threshold %)
-    - Marubozu detection (body >= threshold of range)
-    
-    Supports both LONG and SHORT sides.
+    Vektörel strateji - 3 koşulu birleştirir:
+    1. EMA Zinciri (Tüm EMA'lar sıralı mı?)
+    2. Pump Tespiti (Mum %X'den fazla hareket etti mi?)
+    3. Marubozu Tespiti (Mum gövdesi fitilsiz mi?)
     """
     
+    # =========================================================================
+    # BÖLÜM 1: BAŞLATMA (INITIALIZATION)
+    # =========================================================================
     def __init__(self, tp=0.04, sl=0.02, bet_size=7.0, side="SHORT",
                  pump_threshold=0.02, marubozu_threshold=0.80, **kwargs):
+        """
+        Strateji parametrelerini ayarla.
+        
+        Parametreler:
+        - tp: Take Profit yüzdesi (0.02 = %2)
+        - sl: Stop Loss yüzdesi (0.02 = %2)  
+        - bet_size: Pozisyon büyüklüğü (USD)
+        - side: İşlem yönü ("LONG" veya "SHORT")
+        - pump_threshold: Pump eşiği (0.02 = %2 hareket)
+        - marubozu_threshold: Marubozu eşiği (0.80 = gövde >= %80)
+        """
         super().__init__(bet_size=bet_size)
-        self.tp = tp
-        self.sl = sl
-        self.side = side
-        self.pump_threshold = pump_threshold
-        self.marubozu_threshold = marubozu_threshold
         
-        # EMA Settings
+        # Temel parametreler
+        self.tp = tp                          # Take Profit
+        self.sl = sl                          # Stop Loss
+        self.side = side                      # LONG veya SHORT
+        self.pump_threshold = pump_threshold  # Pump eşiği
+        self.marubozu_threshold = marubozu_threshold  # Marubozu eşiği
+        
+        # EMA Periyotları - Küçükten büyüğe sıralı
+        # Kısa vadeli: 9, 20, 50, 100, 200
+        # Uzun vadeli: 300, 500, 1000, 2000, 5000
         self.periods = [9, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000]
-        
+    
+    # =========================================================================
+    # BÖLÜM 2: DOSYA OKUMA
+    # =========================================================================
     def process_file(self, filepath):
-        """Legacy wrapper."""
+        """
+        Parquet dosyasını oku ve işle.
+        Bu fonksiyon eski uyumluluk için var.
+        """
         try:
             df = pd.read_parquet(filepath)
             return self.process_data(df)
         except Exception:
             return None
 
+    # =========================================================================
+    # BÖLÜM 3: ANA İŞLEME FONKSİYONU
+    # =========================================================================
     def process_data(self, df):
         """
-        Vectorized processing - returns Polars DataFrame with 'entry_signal' column.
+        Tüm veriyi vektörel olarak işle.
+        Her satır için döngü yapmadan, tüm hesaplamalar tek seferde yapılır.
+        
+        Döndürür: Polars DataFrame ('entry_signal' sütunu True olan mumlar sinyal)
         """
         try:
-            # 1. Read with Pandas (for fast EWM)
-            # df is already DataFrame
+            # Boş veri kontrolü
             if df.empty:
                 return None
 
-            # 2. VECTORIZED EMA CALCULATION
-            closes = df['close']
-            opens = df['open']
-            highs = df['high']
-            lows = df['low']
+            # -----------------------------------------------------------------
+            # ADIM 1: VERİ SÜTUNLARINI AYIKLA
+            # -----------------------------------------------------------------
+            closes = df['close']   # Kapanış fiyatları
+            opens = df['open']     # Açılış fiyatları
+            highs = df['high']     # En yüksek fiyatlar
+            lows = df['low']       # En düşük fiyatlar
             
+            # -----------------------------------------------------------------
+            # ADIM 2: TÜM EMA'LARI HESAPLA (Vektörel)
+            # -----------------------------------------------------------------
+            # Her periyot için EMA hesapla ve sözlükte sakla
+            # ewm = Exponential Weighted Mean (Üstel Ağırlıklı Ortalama)
             ema_dict = {}
             for p in self.periods:
+                # span=p: Periyot uzunluğu
+                # adjust=False: Klasik EMA formülü
+                # min_periods=p: İlk p mum NaN olacak (yeterli veri yok)
                 ema_dict[p] = closes.ewm(span=p, adjust=False, min_periods=p).mean()
             
-            # 3. VECTORIZED CHAIN CHECK
+            # -----------------------------------------------------------------
+            # ADIM 3: EMA ZİNCİR KONTROLÜ
+            # -----------------------------------------------------------------
             def check_chain(period_list, threshold_pct, bullish=True):
+                """
+                EMA zincirinin sıralı olup olmadığını kontrol et.
+                
+                Bullish (Boğa): EMA9 > EMA20 > EMA50 > ... (küçük > büyük)
+                Bearish (Ayı): EMA9 < EMA20 < EMA50 < ... (küçük < büyük)
+                
+                threshold_pct: Fark için minimum eşik (gürültüyü filtreler)
+                """
+                # Başlangıçta tüm satırlar True
                 mask = pd.Series(True, index=df.index)
+                
+                # Her ardışık EMA çiftini kontrol et
                 for i in range(len(period_list) - 1):
-                    fast_p = period_list[i]
-                    slow_p = period_list[i + 1]
+                    fast_p = period_list[i]      # Hızlı EMA (kısa periyot)
+                    slow_p = period_list[i + 1]  # Yavaş EMA (uzun periyot)
                     
                     val_fast = ema_dict[fast_p]
                     val_slow = ema_dict[slow_p]
                     
                     if bullish:
+                        # Boğa: Hızlı EMA, yavaş EMA'nın üzerinde olmalı
                         threshold = val_slow * (1 + threshold_pct)
                         mask = mask & (val_fast > threshold)
                     else:
+                        # Ayı: Hızlı EMA, yavaş EMA'nın altında olmalı
                         threshold = val_slow * (1 - threshold_pct)
                         mask = mask & (val_fast < threshold)
                 return mask
 
+            # Kısa vadeli EMA'lar (hızlı hareket)
             small_periods = [9, 20, 50, 100, 200]
+            # Uzun vadeli EMA'lar (trend yönü)
             big_periods = [300, 500, 1000, 2000, 5000]
             
-            # All Bull: small bull + big bull
+            # BOĞA TRENDİ: Tüm kısa ve uzun EMA'lar yukarı sıralı
             is_small_bull = check_chain(small_periods, 0.00001/100.0, bullish=True)
             is_big_bull = check_chain(big_periods, 0.0001/100.0, bullish=True)
             all_bull = is_small_bull & is_big_bull
             
-            # All Bear: small bear + big bear
+            # AYI TRENDİ: Tüm kısa ve uzun EMA'lar aşağı sıralı
             is_small_bear = check_chain(small_periods, 0.0001/100.0, bullish=False)
             is_big_bear = check_chain(big_periods, 0.001/100.0, bullish=False)
             all_bear = is_small_bear & is_big_bear
             
-            # 4. PUMP CALCULATION
+            # -----------------------------------------------------------------
+            # ADIM 4: PUMP TESPİTİ
+            # -----------------------------------------------------------------
+            # Pump = (Kapanış - Açılış) / Açılış
+            # Pozitif = Yeşil mum (yukarı pump)
+            # Negatif = Kırmızı mum (aşağı dump)
             pump_pct = (closes - opens) / opens
-            is_pump_up = pump_pct > self.pump_threshold    # Green candle pump
-            is_pump_down = pump_pct < -self.pump_threshold  # Red candle dump
+            is_pump_up = pump_pct > self.pump_threshold     # Yeşil pump
+            is_pump_down = pump_pct < -self.pump_threshold  # Kırmızı dump
             
-            # 5. MARUBOZU CALCULATION
-            body_size = (closes - opens).abs()
-            total_range = highs - lows
+            # -----------------------------------------------------------------
+            # ADIM 5: MARUBOZU TESPİTİ
+            # -----------------------------------------------------------------
+            # Marubozu = Fitilsiz veya çok az fitilli mum
+            # Formül: Gövde / Toplam Uzunluk >= Eşik
+            #
+            # Örnek: %80 eşik = Gövde, toplam mumun %80'i kadar olmalı
+            # Bu güçlü bir momentum göstergesi
+            
+            body_size = (closes - opens).abs()  # Gövde büyüklüğü (mutlak değer)
+            total_range = highs - lows          # Toplam mum uzunluğu (high-low)
+            
+            # Sıfıra bölme hatası önleme
             marubozu_ratio = pd.Series(0.0, index=df.index)
             valid_range = total_range > 0
             marubozu_ratio[valid_range] = body_size[valid_range] / total_range[valid_range]
+            
+            # Eşik kontrolü
             is_marubozu = marubozu_ratio >= self.marubozu_threshold
             
-            # 6. COMBINE SIGNALS BASED ON SIDE
-            # NOTE: EMA disabled for testing - only pump + marubozu
+            # -----------------------------------------------------------------
+            # ADIM 6: SİNYALLERİ BİRLEŞTİR
+            # -----------------------------------------------------------------
+            # NOT: EMA şu an DEVRE DIŞI - sadece pump + marubozu kullanılıyor
+            # EMA'yı aktif etmek için aşağıdaki satırları değiştir:
+            #   SHORT: all_bear & is_pump_up & is_marubozu
+            #   LONG: all_bull & is_pump_up & is_marubozu
+            
             if self.side == "SHORT":
-                # SHORT: Pump Up + Marubozu (EMA disabled)
+                # SHORT STRATEJİSİ:
+                # Yukarı pump + Marubozu = Geri dönüş beklentisi
+                # (EMA devre dışı: all_bear koşulu yok)
                 final_signal = is_pump_up & is_marubozu
             else:  # LONG
-                # LONG: Pump Up + Marubozu (EMA disabled)
+                # LONG STRATEJİSİ:
+                # Yukarı pump + Marubozu = Devam hareketi beklentisi
+                # (EMA devre dışı: all_bull koşulu yok)
                 final_signal = is_pump_up & is_marubozu
             
+            # -----------------------------------------------------------------
+            # ADIM 7: SONUÇ KONTROLÜ VE DÖNÜŞ
+            # -----------------------------------------------------------------
+            # Hiç sinyal yoksa None döndür
             if not final_signal.any():
                 return None
                 
-            # 7. Return Polars DataFrame
+            # Sinyal sütununu ekle
             df['entry_signal'] = final_signal
             
+            # Polars DataFrame'e çevir (backtest_framework bunu bekliyor)
             pl_df = pl.from_pandas(df)
             
             return pl_df
             
         except Exception as e:
-            # Silent fail for individual files
+            # Hata durumunda sessizce None döndür
+            # (Bazı semboller için veri eksik olabilir)
             return None
 
+    # =========================================================================
+    # BÖLÜM 4: MUM MUM İŞLEME (KULLANILMIYOR)
+    # =========================================================================
     def on_candle(self, timestamp, open, high, low, close):
-        # Not used in vectorized mode
+        """
+        Tek mum işleme fonksiyonu.
+        Vektörel modda kullanılmıyor - sadece uyumluluk için var.
+        """
         pass
