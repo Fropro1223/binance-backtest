@@ -106,12 +106,13 @@ class VectorizedStrategy(Strategy):
             is_marubozu = marubozu_ratio >= self.marubozu_threshold
             
             # 6. COMBINE SIGNALS BASED ON SIDE
+            # NOTE: EMA disabled for testing - only pump + marubozu
             if self.side == "SHORT":
-                # SHORT: All Bear + Pump Up + Marubozu (continuation short after pump in bear trend)
-                final_signal = all_bear & is_pump_up & is_marubozu
+                # SHORT: Pump Up + Marubozu (EMA disabled)
+                final_signal = is_pump_up & is_marubozu
             else:  # LONG
-                # LONG: All Bull + Pump Up + Marubozu (continuation long in bull trend)
-                final_signal = all_bull & is_pump_up & is_marubozu
+                # LONG: Pump Up + Marubozu (EMA disabled)
+                final_signal = is_pump_up & is_marubozu
             
             if not final_signal.any():
                 return None

@@ -468,7 +468,9 @@ def log_analysis_to_sheet(data: dict):
         for k, v in row_data.items():
             final_values[k-1] = v
             
-        ws.insert_row(final_values, index=3)
+        print(f"DEBUG: Inserting Row Data: {final_values}")
+            
+        ws.insert_row(final_values, index=3, value_input_option='USER_ENTERED')
         
         # --- FORMATTING & CF (Row 3+) ---
         ws.freeze(rows=2)
@@ -521,18 +523,45 @@ def log_analysis_to_sheet(data: dict):
         
         cf_requests.extend(create_pnl_rule(5)) # Total PnL
         
-        # Weekly Columns Formats
+        # Weekly Columns Formats with Alternating Colors
         headers_r2_final = ws.row_values(2)
+        week_pair_index = 0  # Track which week pair we're on
+        
+        # Define alternating background colors (light blue and light gray)
+        color_a = {"red": 0.9, "green": 0.95, "blue": 1.0}  # Light blue
+        color_b = {"red": 0.95, "green": 0.95, "blue": 0.95}  # Light gray
+        
         for i, val in enumerate(headers_r2_final):
             c_idx = i + 1
             if c_idx <= 5: continue
             
             rng = f"{gspread.utils.rowcol_to_a1(3, c_idx)}:{gspread.utils.rowcol_to_a1(1000, c_idx)}"
+            header_rng = f"{gspread.utils.rowcol_to_a1(1, c_idx)}:{gspread.utils.rowcol_to_a1(2, c_idx)}"
+            
+            # Determine color based on week pair (Trades starts a new pair)
+            if val == "Trades":
+                current_color = color_a if week_pair_index % 2 == 0 else color_b
+                week_pair_index += 1
+            else:
+                # PnL uses same color as its Trades pair
+                current_color = color_a if (week_pair_index - 1) % 2 == 0 else color_b
             
             if val == "Trades":
-                ws.format(rng, {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT"})
+                ws.format(rng, {
+                    "numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, 
+                    "horizontalAlignment": "RIGHT",
+                    "backgroundColor": current_color
+                })
+                # Also color the header row
+                ws.format(header_rng, {"backgroundColor": current_color})
             elif val == "PnL":
-                ws.format(rng, {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT"})
+                ws.format(rng, {
+                    "numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, 
+                    "horizontalAlignment": "RIGHT",
+                    "backgroundColor": current_color
+                })
+                # Also color the header row
+                ws.format(header_rng, {"backgroundColor": current_color})
                 cf_requests.extend(create_pnl_rule(c_idx))
 
         # Send Batch CF

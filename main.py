@@ -77,7 +77,7 @@ def parse_args():
                         help='Paralel yerine seri işleme (debug için)')
     
     parser.add_argument('--tf', type=str, default=None,
-                        help='Timeframe filtresi (örn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
+                        help='Timeframe filtresi (orn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
     
     return parser.parse_args()
 
@@ -191,44 +191,107 @@ def main():
     weekly_stats = []
     
     try:
-        results['entry_time'] = pd.to_datetime(results['entry_time'])
-        results = results.sort_values('entry_time')
-        
-        start_date = results['entry_time'].min().strftime('%d.%m')
-        end_date = results['entry_time'].max().strftime('%d.%m')
-        overall_date_range = f"({start_date}-{end_date})"
-        
-        # TradingView style: Week starts Sunday 03:00 UTC+3
-        # Shift times by -3 hours so that Sunday 03:00 becomes Sunday 00:00
-        # Then use W-SUN (week ending Sunday) for grouping
-        shifted = results.copy()
-        shifted['week_time'] = results['entry_time'] - pd.Timedelta(hours=3)
-        
-        weekly_groups = shifted.set_index('week_time').resample('W-SUN')
-        
-        for week_end, group in weekly_groups:
-            # week_end is the shifted Sunday 00:00, so real week is Sunday 03:00
-            real_week_end = week_end + pd.Timedelta(hours=3)
-            real_week_start = real_week_end - pd.Timedelta(days=7)
+        if not results.empty:
+            # Ensure results['entry_time'] is timezone aware (Europe/Istanbul)
+            # It comes as object or datetime64[ns] (UTC usually from stored parquet or naive)
+            # First convert to datetime
+            results['entry_time'] = pd.to_datetime(results['entry_time'])
             
-            w_start = real_week_start.strftime('%d.%m')
-            w_end_str = real_week_end.strftime('%d.%m')
-            label = f"{w_start}-{w_end_str}"
+            # If naive, assume UTC and convert. If already aware, convert.
+            if results['entry_time'].dt.tz is None:
+                results['entry_time'] = results['entry_time'].dt.tz_localize('UTC').dt.tz_convert('Europe/Istanbul')
+            else:
+                results['entry_time'] = results['entry_time'].dt.tz_convert('Europe/Istanbul')
+
+            # Use fixed 90 days lookback to show ALL weeks
+            end_timestamp = pd.Timestamp.now(tz='Europe/Istanbul')
+            start_timestamp = end_timestamp - pd.Timedelta(days=90)
             
-            if group.empty:
-                continue
+            overall_date_range = f"({start_timestamp.strftime('%d.%m')}-{end_timestamp.strftime('%d.%m')})"
             
-            weekly_stats.append({
-                'label': label,
-                'trades': len(group),
-                'pnl': group['pnl_usd'].sum()
-            })
-        
-        # Reverse order: newest week first
-        weekly_stats = weekly_stats[::-1]
+            # --- ROBUST MANUAL BINNING ---
+            # 1. Define Week Anchors (Sunday 03:00 UTC+3)
+            # Find the next Sunday 03:00 from start_timestamp
+            days_until_sunday = (6 - start_timestamp.weekday()) % 7
+            # If today is Sunday and before 03:00, it belongs to previous week.
+            # But let's just create a grid and filter.
             
+            # Current Sunday 03:00 relative to end_timestamp
+            days_since_sunday = (end_timestamp.weekday() + 1) % 7 
+            # If today is Sunday, weekday is 6. (6+1)%7 = 0.
+            
+            # Let's align to the most recent Sunday 03:00 that has passed or is today
+            # Actually we want "Week Ending".
+            # Let's generate a list of Week Starts (Sundays 03:00) going back 13 weeks.
+            
+            # Find Next Sunday 03:00 from "Now" to start going backwards?
+            # Or just take "Now" and find the last Sunday 03:00.
+            
+            # Anchor: Last Sunday 03:00
+            today = pd.Timestamp.now(tz='Europe/Istanbul')
+            # normalized to 03:00
+            current_sun_03 = today.replace(hour=3, minute=0, second=0, microsecond=0)
+            while current_sun_03.weekday() != 6: # 6 is Sunday
+                 current_sun_03 -= pd.Timedelta(days=1)
+            
+            # If we are before 03:00 on Sunday, the cycle belongs to prev week?
+            # TradingView week starts Sunday 03:00.
+            # So if now is Sunday 02:00, we are in the week that started LAST Sunday.
+            if today.weekday() == 6 and today.hour < 3:
+                 current_sun_03 -= pd.Timedelta(days=7)
+
+            # Generate last 15 week STARTS
+            week_starts = []
+            for i in range(15):
+                ws = current_sun_03 - pd.Timedelta(days=7*i)
+                week_starts.append(ws)
+            
+            # Sort old to new for processing label
+            week_starts = sorted(week_starts)
+            
+            # Create Bins
+            # Bin i: [week_starts[i], week_starts[i] + 7days)
+            
+            weekly_stats = []
+            
+            for ws in week_starts:
+                we = ws + pd.Timedelta(days=7)
+                
+                # Skip future weeks
+                if ws > today:
+                    continue
+                    
+                # Filter trades in this range
+                mask = (results['entry_time'] >= ws) & (results['entry_time'] < we)
+                week_trades = results[mask]
+                
+                # Format Label
+                # Label typically shows Week END? or Range?
+                # User likes: "11.01-18.01" (Start-End)
+                w_start_str = ws.strftime('%d.%m')
+                w_end_str = we.strftime('%d.%m')
+                label = f"{w_start_str}-{w_end_str}"
+                
+                weekly_stats.append({
+                    'label': label,
+                    'trades': len(week_trades),
+                    'pnl': week_trades['pnl_usd'].sum()
+                })
+            
+            # Reverse for display (Newest first)
+            weekly_stats = weekly_stats[::-1]
+
     except Exception as e:
         print(f"⚠️ Error calculating weekly stats: {e}")
+
+    # Print Weekly Stats Table
+    if weekly_stats:
+        print("\n📅 WEEKLY BREAKDOWN (Sunday 03:00 UTC+3)")
+        print(f"{'Week Range':<15} | {'Trades':<8} | {'PnL ($)':<12}")
+        print("-" * 41)
+        for w in weekly_stats:
+            print(f"{w['label']:<15} | {w['trades']:<8} | ${w['pnl']:<12.2f}")
+        print("-" * 41)
 
     # === GOOGLE SHEETS LOGGING ===
     if not args.no_sheets:
