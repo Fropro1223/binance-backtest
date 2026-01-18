@@ -77,8 +77,8 @@ def parse_args():
                         help='Timeframe filtresi (orn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
 
     parser.add_argument('--ema', type=str, default='none', 
-                        choices=['bull', 'bear', 'small_bull', 'small_bear', 'big_bull', 'big_bear', 'none'],
-                        help='EMA: bull/bear (all), small_bull/small_bear (<=200), big_bull/big_bear (>200), none')
+                        choices=['all_bull', 'all_bear', 'small_bull', 'small_bear', 'big_bull', 'big_bear', 'none'],
+                        help='EMA: all_bull/all_bear (9-5000), small_bull/small_bear (9-200), big_bull/big_bear (300-5000), none')
     
     return parser.parse_args()
 

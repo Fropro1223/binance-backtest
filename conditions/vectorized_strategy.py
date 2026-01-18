@@ -189,10 +189,10 @@ class VectorizedStrategy(Strategy):
             # Pump + Marubozu + EMA (BAĞIMSIZ)
             
             # EMA filtresi: Kullanıcı belirlediği duruma göre
-            if self.ema == "bull":
+            if self.ema == "all_bull":
                 # ALL Bullish EMA: 9 > 20 > ... > 5000
                 ema_filter = all_bull
-            elif self.ema == "bear":
+            elif self.ema == "all_bear":
                 # ALL Bearish EMA: 9 < 20 < ... < 5000
                 ema_filter = all_bear
             elif self.ema == "small_bull":
