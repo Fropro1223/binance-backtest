@@ -591,6 +591,16 @@ def process_single_pair_polars(args):
         # Get Side (Default to SHORT if not specified, but usually it is)
         side = getattr(strategy, 'side', 'SHORT')
         
+        # Determine Symbol Name Helper
+        # If filepath is .../raw/BTCUSDT/5s (dir), we want BTCUSDT_5s
+        # If filepath is .../BTCUSDT_5s.parquet (file), we want BTCUSDT_5s
+        display_symbol = os.path.basename(filepath).replace('.parquet', '')
+        if p.is_dir():
+             # filepath is .../SYMBOL/TF
+             tf_part = p.name
+             sym_part = p.parent.name
+             display_symbol = f"{sym_part}_{tf_part}"
+
         while curr_idx < max_idx:
             # 1. Find Next Signal
             future_signals = arr_signals[curr_idx:]
@@ -669,7 +679,7 @@ def process_single_pair_polars(args):
             pnl_usd = bet_size * pnl_pct
             
             completed_trades.append(Trade(
-                symbol=os.path.basename(filepath).replace('.parquet',''),
+                symbol=display_symbol,
                 entry_time=str(entry_time),
                 exit_time=str(exit_time),
                 type=exit_type,

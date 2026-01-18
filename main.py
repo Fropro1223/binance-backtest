@@ -105,7 +105,7 @@ def main():
     # Build strategy name for logging
     # USER RULE: Always include ALL details (Side, EMA, Pump, TP, SL, Marubozu)
     ema_str = f"EMA:{args.ema.capitalize()}"
-    STRATEGY_NAME_LOG = f"[{SIDE}] {ema_str} Pump:{args.pump}% TP:{args.tp}% SL:{args.sl}% Maru:{args.marubozu}"
+    STRATEGY_NAME_LOG = f"[{SIDE}] {args.tf if args.tf else "AllTF"} {ema_str} Pump:{args.pump}% TP:{args.tp}% SL:{args.sl}% Maru:{args.marubozu}"
     
     # If using specific EMA logic hardcoded in strategy, we might want to append it.
     # For now, this covers the CLI args.
@@ -195,9 +195,42 @@ def main():
     print("📅 Calculating Weekly Stats (Sunday 03:00 - Sunday 03:00)...")
     overall_date_range = ""
     weekly_stats = []
+    tf_breakdown = {} # New breakdown dict
     
     try:
         if not results.empty:
+            # ----------------------------------------------------
+            # 1. TIMEFRAME BREAKDOWN CALCULATION
+            # ----------------------------------------------------
+            # Assuming symbol format: COIN_TF (e.g., BTCUSDT_5s)
+            # Extract TF from symbol
+            results['tf'] = results['symbol'].apply(lambda x: x.split('_')[-1] if '_' in x else 'Unknown')
+            
+            # Group by TF
+            tf_groups = results.groupby('tf')
+            total_trades_all = len(results)
+            total_pnl_all = results['pnl_usd'].sum()
+            
+            print("\n📊 Timeframe Breakdown:")
+            for tf, group in tf_groups:
+                tf_trades = len(group)
+                tf_pnl = group['pnl_usd'].sum()
+                
+                # Calculate percentages
+                tr_pct = (tf_trades / total_trades_all) # Percentage 0-1
+                pnl_pct = (tf_pnl / total_pnl_all) if total_pnl_all != 0 else 0
+                
+                tf_breakdown[tf] = {
+                    'trades': tf_trades,
+                    'pnl': tf_pnl,
+                    'trades_pct': tr_pct,
+                    'pnl_pct': pnl_pct
+                }
+                print(f"   {tf}: {tf_trades} ({tr_pct:.1%}) | ${tf_pnl:.2f} ({pnl_pct:.1%})")
+                
+            # ----------------------------------------------------
+            # 2. WEEKLY STATS CALCULATION
+            # ----------------------------------------------------
             # Ensure results['entry_time'] is timezone aware (Europe/Istanbul)
             # It comes as object or datetime64[ns] (UTC usually from stored parquet or naive)
             # First convert to datetime
@@ -288,7 +321,9 @@ def main():
             weekly_stats = weekly_stats[::-1]
 
     except Exception as e:
-        print(f"⚠️ Error calculating weekly stats: {e}")
+        print(f"⚠️ Error calculating stats: {e}")
+        import traceback
+        traceback.print_exc()
 
     # Print Weekly Stats Table
     if weekly_stats:
@@ -317,7 +352,8 @@ def main():
             'best_trade': results['pnl_usd'].max(),
             'worst_trade': results['pnl_usd'].min(),
             'date_range': overall_date_range,
-            'weekly_stats': weekly_stats
+            'weekly_stats': weekly_stats,
+            'tf_breakdown': tf_breakdown  # Pass this to sheets
         }
         
         try:

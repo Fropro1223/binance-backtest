@@ -51,7 +51,7 @@ class VectorizedStrategy(Strategy):
         self.ema = ema.lower()                # EMA durumu (bull/bear/none)
         
         # EMA Periyotları - Küçükten büyüğe sıralı
-        self.periods = [9, 20, 50, 100, 200] if ema.lower() != "none" else []
+        self.periods = [9, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000] if ema.lower() != "none" else []
     
     # =========================================================================
     # BÖLÜM 2: DOSYA OKUMA

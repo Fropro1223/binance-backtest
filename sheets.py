@@ -393,9 +393,25 @@ def log_analysis_to_sheet(data: dict):
         row_data[4] = int(data.get('total_trades', 0))
         row_data[5] = float(data.get('total_pnl', 0))
         
+        # 3. Timeframe Breakdown (F-Q)
+        tf_breakdown = data.get('tf_breakdown', {})
+        if tf_breakdown:
+            print(f"📊 Processing Timeframe Breakdown for Sheets...")
+            # Map TF to Start Column Index (1-based)
+            tf_map = {'5s': 6, '10s': 8, '15s': 10, '30s': 12, '45s': 14, '1m': 16}
+            
+            for tf, stats in tf_breakdown.items():
+                if tf in tf_map:
+                    col_start = tf_map[tf]
+                    row_data[col_start] = stats.get('trades_pct', 0.0)
+                    row_data[col_start+1] = stats.get('pnl_pct', 0.0)
+
         weekly_stats = data.get('weekly_stats', [])
         new_cols_group = []
         next_col_idx = len(headers_r1) + 1
+        # Ensure we don't overwrite TF columns if headers are missing
+        if next_col_idx < 18:
+             next_col_idx = 18
         
         for week in weekly_stats:
             label = week['label']
@@ -515,13 +531,15 @@ def log_analysis_to_sheet(data: dict):
         color_b = {"red": 0.93, "green": 0.93, "blue": 0.93}     # Light gray
         
         # Clear ANY existing Conditional Formatting to prevent conflicts
+        # DISABLED FOR BATCH RUN
         try:
             # Delete top N CF rules to clear any old ones
-            delete_reqs = [{"deleteConditionalFormatRule": {"sheetId": ws.id, "index": 0}} for _ in range(10)]
-            try:
-                sheet.batch_update({"requests": delete_reqs})
-                print("🧹 Cleared old CF rules...")
-            except Exception: pass
+            # delete_reqs = [{"deleteConditionalFormatRule": {"sheetId": ws.id, "index": 0}} for _ in range(10)]
+            # try:
+            #     sheet.batch_update({"requests": delete_reqs})
+            #     print("🧹 Cleared old CF rules...")
+            # except Exception: pass
+            pass
         except Exception: pass
 
         # Collect CF requests for all columns
@@ -627,6 +645,13 @@ def log_analysis_to_sheet(data: dict):
             
         ws.columns_auto_resize(0, len(headers_r2_final))
         print(f"✅ Analysis logged to '{sheet.title}' -> 'Analysis' (Row 3, Merged Headers)")
+        
+        # SKIP CF UPDATE DURING BATCH RUN TO SAVE QUOTA
+        # We will run reset_and_apply_all.py at the end manually
+        # if cf_requests:
+        #    try:
+        #        sheet.batch_update({"requests": cf_requests})
+        #    except Exception: pass
 
     except Exception as e:
         print(f"❌ Failed to log analysis summary: {e}")
