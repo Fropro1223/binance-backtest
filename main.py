@@ -76,8 +76,8 @@ def parse_args():
     parser.add_argument('--tf', type=str, default=None,
                         help='Timeframe filtresi (orn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
 
-    parser.add_argument('--ema_type', type=str, default='Standard',
-                        help='EMA Tipi (örn: AllBear, AllBull, None, Standard)')
+    parser.add_argument('--ema', type=str, default='none', choices=['bull', 'bear', 'none'],
+                        help='EMA durumu: bull (9>20>50>100>200), bear (9<20<50<100<200), none (kullanma)')
     
     return parser.parse_args()
 
@@ -102,10 +102,10 @@ def main():
     AVG_THRESHOLD = args.avg_thresh / 100.0
     SIDE = args.side
     
-    # Build strategy name for logging (includes pump level)
-    # USER RULE: Always include ALL details (Side, Pump, TP, SL, Marubozu, EMA Type)
-    
-    STRATEGY_NAME_LOG = f"Vectorized [{SIDE}] EMA:{args.ema_type} Pump:{args.pump}% TP:{args.tp}% SL:{args.sl}% Maru:{args.marubozu}"
+    # Build strategy name for logging
+    # USER RULE: Always include ALL details (Side, EMA, Pump, TP, SL, Marubozu)
+    ema_str = f"EMA:{args.ema.capitalize()}"
+    STRATEGY_NAME_LOG = f"[{SIDE}] {ema_str} Pump:{args.pump}% TP:{args.tp}% SL:{args.sl}% Maru:{args.marubozu}"
     
     # If using specific EMA logic hardcoded in strategy, we might want to append it.
     # For now, this covers the CLI args.
@@ -152,7 +152,7 @@ def main():
         sl=SL_PCT, 
         bet_size=BET_SIZE,
         side=SIDE,
-        ema_type=args.ema_type,  # CRITICAL: Pass EMA type to strategy!
+        ema=args.ema,  # CRITICAL: Pass EMA state to strategy!
         parallel=not args.serial,
         check_current_candle=check_current_candle,
         tf_filter=args.tf

@@ -27,7 +27,7 @@ class VectorizedStrategy(Strategy):
     # BÖLÜM 1: BAŞLATMA (INITIALIZATION)
     # =========================================================================
     def __init__(self, tp=0.04, sl=0.02, bet_size=7.0, side="SHORT",
-                 pump_threshold=0.02, marubozu_threshold=0.80, ema_type="Standard", **kwargs):
+                 pump_threshold=0.02, marubozu_threshold=0.80, ema="none", **kwargs):
         """
         Strateji parametrelerini ayarla.
         
@@ -38,7 +38,7 @@ class VectorizedStrategy(Strategy):
         - side: İşlem yönü ("LONG" veya "SHORT")
         - pump_threshold: Pump eşiği (0.02 = %2 hareket)
         - marubozu_threshold: Marubozu eşiği (0.80 = gövde >= %80)
-        - ema_type: EMA filtre tipi ("Standard", "AllBull", "AllBear", "None")
+        - ema: EMA durumu ("bull" = yukarı sıralı, "bear" = aşağı sıralı, "none" = kullanma)
         """
         super().__init__(bet_size=bet_size)
         
@@ -48,11 +48,10 @@ class VectorizedStrategy(Strategy):
         self.side = side                      # LONG veya SHORT
         self.pump_threshold = pump_threshold  # Pump eşiği
         self.marubozu_threshold = marubozu_threshold  # Marubozu eşiği
-        self.ema_type = ema_type              # EMA filtre tipi
+        self.ema = ema.lower()                # EMA durumu (bull/bear/none)
         
         # EMA Periyotları - Küçükten büyüğe sıralı
-        # Kısa vadeli: 9, 20, 50, 100, 200
-        self.periods = [9, 20, 50, 100, 200]
+        self.periods = [9, 20, 50, 100, 200] if ema.lower() != "none" else []
     
     # =========================================================================
     # BÖLÜM 2: DOSYA OKUMA
@@ -180,25 +179,23 @@ class VectorizedStrategy(Strategy):
             # -----------------------------------------------------------------
             # ADIM 6: SİNYALLERİ BİRLEŞTİR
             # -----------------------------------------------------------------
-            # EMA + Pump + Marubozu kombinasyonu
+            # Pump + Marubozu + EMA (BAĞIMSIZ)
             
-            # EMA filtresi uygula (ema_type'a göre)
-            if self.ema_type == "AllBull":
+            # EMA filtresi: Kullanıcı belirlediği duruma göre
+            if self.ema == "bull":
+                # Bullish EMA: 9 > 20 > 50 > 100 > 200
                 ema_filter = all_bull
-            elif self.ema_type == "AllBear":
+            elif self.ema == "bear":
+                # Bearish EMA: 9 < 20 < 50 < 100 < 200
                 ema_filter = all_bear
-            elif self.ema_type == "Standard":
-                # Standard: SHORT için AllBear, LONG için AllBull
-                ema_filter = all_bear if self.side == "SHORT" else all_bull
-            else:  # "None" veya diğer
-                # EMA filtresi yok, tüm satırlar geçer
+            else:  # "none"
+                # EMA yok, tüm satırlar geçer
                 ema_filter = pd.Series(True, index=df.index)
             
+            # Final signal: Pump + Marubozu + EMA (HER BİRİ BAĞIMSIZ)
             if self.side == "SHORT":
-                # SHORT: Pump sonrası düşüş beklentisi
                 final_signal = is_pump_up & is_marubozu & ema_filter
             else:  # LONG
-                # LONG: Pump sonrası yükseliş devamı
                 final_signal = is_pump_up & is_marubozu & ema_filter
             
             # -----------------------------------------------------------------
