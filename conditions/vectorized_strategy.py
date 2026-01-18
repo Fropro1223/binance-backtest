@@ -136,15 +136,16 @@ class VectorizedStrategy(Strategy):
                 return mask
 
             # -----------------------------------------------------------------
-            # ALL EMA CONDITIONS (Must include up to 5000 if 'ema' is active)
+            # EMA CONDITIONS
             # -----------------------------------------------------------------
-            # Periyotları __init__ kısmından alıyoruz (9...5000)
+            # SMALL EMA (200'e kadar)
+            small_periods = [9, 20, 50, 100, 200]
+            small_bull = check_chain(small_periods, 0.00001/100.0, bullish=True)
+            small_bear = check_chain(small_periods, 0.0001/100.0, bullish=False)
+            
+            # ALL EMA (5000'e kadar - self.periods'dan)
             target_periods = self.periods
-            
-            # BOĞA TRENDİ: Tüm EMA'lar yukarı sıralı (9 > 20 > ... > 5000)
             all_bull = check_chain(target_periods, 0.00001/100.0, bullish=True)
-            
-            # AYI TRENDİ: Tüm EMA'lar aşağı sıralı (9 < 20 < ... < 5000)
             all_bear = check_chain(target_periods, 0.0001/100.0, bullish=False)
             
             # -----------------------------------------------------------------
@@ -184,11 +185,17 @@ class VectorizedStrategy(Strategy):
             
             # EMA filtresi: Kullanıcı belirlediği duruma göre
             if self.ema == "bull":
-                # Bullish EMA: 9 > 20 > 50 > 100 > 200
+                # ALL Bullish EMA: 9 > 20 > ... > 5000
                 ema_filter = all_bull
             elif self.ema == "bear":
-                # Bearish EMA: 9 < 20 < 50 < 100 < 200
+                # ALL Bearish EMA: 9 < 20 < ... < 5000
                 ema_filter = all_bear
+            elif self.ema == "small_bull":
+                # SMALL Bullish EMA: 9 > 20 > 50 > 100 > 200
+                ema_filter = small_bull
+            elif self.ema == "small_bear":
+                # SMALL Bearish EMA: 9 < 20 < 50 < 100 < 200
+                ema_filter = small_bear
             else:  # "none"
                 # EMA yok, tüm satırlar geçer
                 ema_filter = pd.Series(True, index=df.index)

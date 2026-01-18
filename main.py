@@ -76,8 +76,8 @@ def parse_args():
     parser.add_argument('--tf', type=str, default=None,
                         help='Timeframe filtresi (orn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
 
-    parser.add_argument('--ema', type=str, default='none', choices=['bull', 'bear', 'none'],
-                        help='EMA durumu: bull (9>20>50>100>200), bear (9<20<50<100<200), none (kullanma)')
+    parser.add_argument('--ema', type=str, default='none', choices=['bull', 'bear', 'small_bull', 'small_bear', 'none'],
+                        help='EMA durumu: bull (all 9>...>5000), bear (all 9<...<5000), small_bull (9>...>200), small_bear (9<...<200), none (kullanma)')
     
     return parser.parse_args()
 
