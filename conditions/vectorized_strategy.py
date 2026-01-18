@@ -143,7 +143,12 @@ class VectorizedStrategy(Strategy):
             small_bull = check_chain(small_periods, 0.00001/100.0, bullish=True)
             small_bear = check_chain(small_periods, 0.0001/100.0, bullish=False)
             
-            # ALL EMA (5000'e kadar - self.periods'dan)
+            # BIG EMA (200'den büyük)
+            big_periods = [300, 500, 1000, 2000, 5000]
+            big_bull = check_chain(big_periods, 0.00001/100.0, bullish=True)
+            big_bear = check_chain(big_periods, 0.0001/100.0, bullish=False)
+            
+            # ALL EMA (hepsi - self.periods'dan)
             target_periods = self.periods
             all_bull = check_chain(target_periods, 0.00001/100.0, bullish=True)
             all_bear = check_chain(target_periods, 0.0001/100.0, bullish=False)
@@ -196,6 +201,12 @@ class VectorizedStrategy(Strategy):
             elif self.ema == "small_bear":
                 # SMALL Bearish EMA: 9 < 20 < 50 < 100 < 200
                 ema_filter = small_bear
+            elif self.ema == "big_bull":
+                # BIG Bullish EMA: 300 > 500 > 1000 > 2000 > 5000
+                ema_filter = big_bull
+            elif self.ema == "big_bear":
+                # BIG Bearish EMA: 300 < 500 < 1000 < 2000 < 5000
+                ema_filter = big_bear
             else:  # "none"
                 # EMA yok, tüm satırlar geçer
                 ema_filter = pd.Series(True, index=df.index)
