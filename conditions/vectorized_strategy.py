@@ -27,7 +27,7 @@ class VectorizedStrategy(Strategy):
     # BÖLÜM 1: BAŞLATMA (INITIALIZATION)
     # =========================================================================
     def __init__(self, tp=0.04, sl=0.02, bet_size=7.0, side="SHORT",
-                 pump_threshold=0.02, marubozu_threshold=0.80, **kwargs):
+                 pump_threshold=0.02, marubozu_threshold=0.80, ema_type="Standard", **kwargs):
         """
         Strateji parametrelerini ayarla.
         
@@ -38,6 +38,7 @@ class VectorizedStrategy(Strategy):
         - side: İşlem yönü ("LONG" veya "SHORT")
         - pump_threshold: Pump eşiği (0.02 = %2 hareket)
         - marubozu_threshold: Marubozu eşiği (0.80 = gövde >= %80)
+        - ema_type: EMA filtre tipi ("Standard", "AllBull", "AllBear", "None")
         """
         super().__init__(bet_size=bet_size)
         
@@ -47,11 +48,11 @@ class VectorizedStrategy(Strategy):
         self.side = side                      # LONG veya SHORT
         self.pump_threshold = pump_threshold  # Pump eşiği
         self.marubozu_threshold = marubozu_threshold  # Marubozu eşiği
+        self.ema_type = ema_type              # EMA filtre tipi
         
         # EMA Periyotları - Küçükten büyüğe sıralı
         # Kısa vadeli: 9, 20, 50, 100, 200
-        # Uzun vadeli: 300, 500, 1000, 2000, 5000
-        self.periods = [9, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000]
+        self.periods = [9, 20, 50, 100, 200]
     
     # =========================================================================
     # BÖLÜM 2: DOSYA OKUMA
@@ -137,18 +138,14 @@ class VectorizedStrategy(Strategy):
 
             # Kısa vadeli EMA'lar (hızlı hareket)
             small_periods = [9, 20, 50, 100, 200]
-            # Uzun vadeli EMA'lar (trend yönü)
-            big_periods = [300, 500, 1000, 2000, 5000]
+            # Uzun vadeli (bu versiyonda kapalı veya küçükler ile aynı)
+            # big_periods = [300, 500, 1000, 2000, 5000] # REMOVED to save data
             
-            # BOĞA TRENDİ: Tüm kısa ve uzun EMA'lar yukarı sıralı
-            is_small_bull = check_chain(small_periods, 0.00001/100.0, bullish=True)
-            is_big_bull = check_chain(big_periods, 0.0001/100.0, bullish=True)
-            all_bull = is_small_bull & is_big_bull
+            # BOĞA TRENDİ: Tüm EMA'lar yukarı sıralı
+            all_bull = check_chain(self.periods, 0.00001/100.0, bullish=True)
             
-            # AYI TRENDİ: Tüm kısa ve uzun EMA'lar aşağı sıralı
-            is_small_bear = check_chain(small_periods, 0.0001/100.0, bullish=False)
-            is_big_bear = check_chain(big_periods, 0.001/100.0, bullish=False)
-            all_bear = is_small_bear & is_big_bear
+            # AYI TRENDİ: Tüm EMA'lar aşağı sıralı
+            all_bear = check_chain(self.periods, 0.0001/100.0, bullish=False)
             
             # -----------------------------------------------------------------
             # ADIM 4: PUMP TESPİTİ
@@ -183,16 +180,26 @@ class VectorizedStrategy(Strategy):
             # -----------------------------------------------------------------
             # ADIM 6: SİNYALLERİ BİRLEŞTİR
             # -----------------------------------------------------------------
-            # EMA + Pump + Marubozu kombinasyonu AKTİF
+            # EMA + Pump + Marubozu kombinasyonu
+            
+            # EMA filtresi uygula (ema_type'a göre)
+            if self.ema_type == "AllBull":
+                ema_filter = all_bull
+            elif self.ema_type == "AllBear":
+                ema_filter = all_bear
+            elif self.ema_type == "Standard":
+                # Standard: SHORT için AllBear, LONG için AllBull
+                ema_filter = all_bear if self.side == "SHORT" else all_bull
+            else:  # "None" veya diğer
+                # EMA filtresi yok, tüm satırlar geçer
+                ema_filter = pd.Series(True, index=df.index)
             
             if self.side == "SHORT":
-                # SHORT STRATEJİSİ:
-                # Ayı trendi (all_bear) + Yukarı pump + Marubozu = Geri dönüş
-                final_signal = all_bear & is_pump_up & is_marubozu
+                # SHORT: Pump sonrası düşüş beklentisi
+                final_signal = is_pump_up & is_marubozu & ema_filter
             else:  # LONG
-                # LONG STRATEJİSİ:
-                # Boğa trendi (all_bull) + Yukarı pump + Marubozu = Devam
-                final_signal = all_bull & is_pump_up & is_marubozu
+                # LONG: Pump sonrası yükseliş devamı
+                final_signal = is_pump_up & is_marubozu & ema_filter
             
             # -----------------------------------------------------------------
             # ADIM 7: SONUÇ KONTROLÜ VE DÖNÜŞ

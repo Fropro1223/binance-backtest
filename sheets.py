@@ -409,15 +409,29 @@ def log_analysis_to_sheet(data: dict):
                     found_col = i + 1
                     break
             
+            # Formatted Trades Percentage (Float)
+            total_trades_count = int(data.get('total_trades', 0))
+            if total_trades_count > 0:
+                trade_val = (trades / total_trades_count)
+            else:
+                trade_val = 0.0
+                
+            # Formatted PnL Percentage (Float)
+            total_pnl_val_total = float(data.get('total_pnl', 0.0))
+            if abs(total_pnl_val_total) > 0.000001:
+                pnl_val = (pnl / total_pnl_val_total)
+            else:
+                pnl_val = 0.0
+            
             if found_col != -1:
                 # Found existing week: Trades at found_col, PnL at found_col+1
-                row_data[found_col] = int(trades)
-                row_data[found_col+1] = float(pnl)
+                row_data[found_col] = trade_val
+                row_data[found_col+1] = pnl_val
             else:
                 # New Week
                 current_start = next_col_idx + (len(new_cols_group) * 2)
-                row_data[current_start] = int(trades)
-                row_data[current_start+1] = float(pnl)
+                row_data[current_start] = trade_val
+                row_data[current_start+1] = pnl_val
                 
                 new_cols_group.append({
                     'label': label,
@@ -491,46 +505,56 @@ def log_analysis_to_sheet(data: dict):
         ws.format("D3:D1000", {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT"}) 
         ws.format("E3:E1000", {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT"})
 
-        # PnL CF Rules
-        cf_requests = []
-        def create_pnl_rule(col_idx):
-            return [
-                {
-                    "addConditionalFormatRule": {
-                        "rule": {
-                            "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "startColumnIndex": col_idx-1, "endColumnIndex": col_idx}],
-                            "booleanRule": {
-                                "condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]},
-                                "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}
-                            }
-                        },
-                        "index": 0
-                    }
-                },
-                {
-                    "addConditionalFormatRule": {
-                        "rule": {
-                            "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "startColumnIndex": col_idx-1, "endColumnIndex": col_idx}],
-                            "booleanRule": {
-                                "condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]},
-                                "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}
-                            }
-                        },
-                        "index": 1
-                    }
-                }
-            ]
-        
-        cf_requests.extend(create_pnl_rule(5)) # Total PnL
         
         # Weekly Columns Formats with Alternating Colors
         headers_r2_final = ws.row_values(2)
         week_pair_index = 0  # Track which week pair we're on
         
-        # Define alternating background colors (light blue and light gray)
-        color_a = {"red": 0.9, "green": 0.95, "blue": 1.0}  # Light blue
-        color_b = {"red": 0.95, "green": 0.95, "blue": 0.95}  # Light gray
+        # Define alternating background colors (White and Light Gray)
+        color_a = {"red": 1.0, "green": 1.0, "blue": 1.0}        # White
+        color_b = {"red": 0.93, "green": 0.93, "blue": 0.93}     # Light gray
         
+        # Clear ANY existing Conditional Formatting to prevent conflicts
+        try:
+            # Delete top N CF rules to clear any old ones
+            delete_reqs = [{"deleteConditionalFormatRule": {"sheetId": ws.id, "index": 0}} for _ in range(10)]
+            try:
+                sheet.batch_update({"requests": delete_reqs})
+                print("🧹 Cleared old CF rules...")
+            except Exception: pass
+        except Exception: pass
+
+        # Collect CF requests for all columns
+        cf_requests = []
+        
+        # CF for Column E (Total PnL) - Uses column index 4 (0-based)
+        cf_requests.append({
+            "addConditionalFormatRule": {
+                "rule": {
+                    "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 4, "endColumnIndex": 5}],
+                    "booleanRule": {
+                        "condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]},
+                        "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}
+                    }
+                },
+                "index": 0
+            }
+        })
+        cf_requests.append({
+            "addConditionalFormatRule": {
+                "rule": {
+                    "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 4, "endColumnIndex": 5}],
+                    "booleanRule": {
+                        "condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]},
+                        "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}
+                    }
+                },
+                "index": 1
+            }
+        })
+        
+        # CF for Weekly PnL columns
+        cf_rule_index = 2
         for i, val in enumerate(headers_r2_final):
             c_idx = i + 1
             if c_idx <= 5: continue
@@ -548,27 +572,58 @@ def log_analysis_to_sheet(data: dict):
             
             if val == "Trades":
                 ws.format(rng, {
-                    "numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, 
+                    "numberFormat": {"type": "PERCENT", "pattern": "0.0%"}, 
                     "horizontalAlignment": "RIGHT",
                     "backgroundColor": current_color
                 })
                 # Also color the header row
                 ws.format(header_rng, {"backgroundColor": current_color})
             elif val == "PnL":
+                # Format with percentage only (no color pattern)
                 ws.format(rng, {
-                    "numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, 
+                    "numberFormat": {"type": "PERCENT", "pattern": "0.0%"}, 
                     "horizontalAlignment": "RIGHT",
                     "backgroundColor": current_color
                 })
                 # Also color the header row
                 ws.format(header_rng, {"backgroundColor": current_color})
-                cf_requests.extend(create_pnl_rule(c_idx))
+                
+                # Add CF rules for this PnL column with SAME colors as Column E
+                cf_requests.append({
+                    "addConditionalFormatRule": {
+                        "rule": {
+                            "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}],
+                            "booleanRule": {
+                                "condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]},
+                                "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}
+                            }
+                        },
+                        "index": cf_rule_index
+                    }
+                })
+                cf_rule_index += 1
+                
+                cf_requests.append({
+                    "addConditionalFormatRule": {
+                        "rule": {
+                            "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}],
+                            "booleanRule": {
+                                "condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]},
+                                "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}
+                            }
+                        },
+                        "index": cf_rule_index
+                    }
+                })
+                cf_rule_index += 1
 
         # Send Batch CF
         if cf_requests:
             try:
                 sheet.batch_update({"requests": cf_requests})
-            except Exception: pass
+                print(f"✅ Applied {len(cf_requests)} conditional formatting rules")
+            except Exception as e:
+                print(f"⚠️ CF application warning: {e}")
             
         ws.columns_auto_resize(0, len(headers_r2_final))
         print(f"✅ Analysis logged to '{sheet.title}' -> 'Analysis' (Row 3, Merged Headers)")

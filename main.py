@@ -75,6 +75,9 @@ def parse_args():
     
     parser.add_argument('--tf', type=str, default=None,
                         help='Timeframe filtresi (orn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
+
+    parser.add_argument('--ema_type', type=str, default='Standard',
+                        help='EMA Tipi (örn: AllBear, AllBull, None, Standard)')
     
     return parser.parse_args()
 
@@ -100,7 +103,12 @@ def main():
     SIDE = args.side
     
     # Build strategy name for logging (includes pump level)
-    STRATEGY_NAME_LOG = f"{args.strategy} [{SIDE}] TP:{args.tp}% SL:{args.sl}% Pump:{args.pump}%"
+    # USER RULE: Always include ALL details (Side, Pump, TP, SL, Marubozu, EMA Type)
+    
+    STRATEGY_NAME_LOG = f"Vectorized [{SIDE}] EMA:{args.ema_type} Pump:{args.pump}% TP:{args.tp}% SL:{args.sl}% Maru:{args.marubozu}"
+    
+    # If using specific EMA logic hardcoded in strategy, we might want to append it.
+    # For now, this covers the CLI args.
     
     # === STRATEGY SELECTION ===
     if args.strategy == 'vectorized':
@@ -144,6 +152,7 @@ def main():
         sl=SL_PCT, 
         bet_size=BET_SIZE,
         side=SIDE,
+        ema_type=args.ema_type,  # CRITICAL: Pass EMA type to strategy!
         parallel=not args.serial,
         check_current_candle=check_current_candle,
         tf_filter=args.tf

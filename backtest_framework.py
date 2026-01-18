@@ -588,6 +588,9 @@ def process_single_pair_polars(args):
         sl_pct = strategy.sl
         bet_size = getattr(strategy, 'bet_size', 7.0)
         
+        # Get Side (Default to SHORT if not specified, but usually it is)
+        side = getattr(strategy, 'side', 'SHORT')
+        
         while curr_idx < max_idx:
             # 1. Find Next Signal
             future_signals = arr_signals[curr_idx:]
@@ -603,8 +606,13 @@ def process_single_pair_polars(args):
             entry_price = arr_close[entry_idx]
             entry_time = arr_time[entry_idx]
             
-            tp_price = entry_price * (1 - tp_pct)
-            sl_price = entry_price * (1 + sl_pct)
+            # Calculate TP/SL Prices based on Side
+            if side == 'SHORT':
+                tp_price = entry_price * (1 - tp_pct)
+                sl_price = entry_price * (1 + sl_pct)
+            else: # LONG
+                tp_price = entry_price * (1 + tp_pct)
+                sl_price = entry_price * (1 - sl_pct)
             
             # 2. Find Exit
             # Scan slice: [entry_idx + 1 : ]
@@ -614,10 +622,15 @@ def process_single_pair_polars(args):
             search_slice_high = arr_high[entry_idx+1:]
             search_slice_low = arr_low[entry_idx+1:]
             
-            # SL Hit: High >= SL
-            sl_hits = np.where(search_slice_high >= sl_price)[0]
-            # TP Hit: Low <= TP
-            tp_hits = np.where(search_slice_low <= tp_price)[0]
+            # SL/TP Hits Logic
+            if side == 'SHORT':
+                # SHORT: Stop if High >= SL, TP if Low <= TP
+                sl_hits = np.where(search_slice_high >= sl_price)[0]
+                tp_hits = np.where(search_slice_low <= tp_price)[0]
+            else: # LONG
+                # LONG: Stop if Low <= SL, TP if High >= TP
+                sl_hits = np.where(search_slice_low <= sl_price)[0]
+                tp_hits = np.where(search_slice_high >= tp_price)[0]
             
             first_sl_idx = sl_hits[0] if len(sl_hits) > 0 else 999999999
             first_tp_idx = tp_hits[0] if len(tp_hits) > 0 else 999999999
@@ -629,12 +642,26 @@ def process_single_pair_polars(args):
                 local_exit_idx = first_sl_idx
                 exit_type = "SL"
                 exit_price = sl_price
-                pnl_pct = (entry_price - exit_price) / entry_price # SHORT logic
+                
+                # Check for instant gap-over SL (Open of next candle exceeds SL?)
+                # This logic checks High/Low only. Assuming intra-candle execution.
+                # Ideally check OPEN of exit candle vs SL to see if we gapped.
+                # For now, sticking to simple hit logic.
+                
+                if side == 'SHORT':
+                    pnl_pct = (entry_price - exit_price) / entry_price
+                else:
+                    pnl_pct = (exit_price - entry_price) / entry_price
+
             else:
                 local_exit_idx = first_tp_idx
                 exit_type = "TP"
                 exit_price = tp_price
-                pnl_pct = (entry_price - exit_price) / entry_price # SHORT logic
+                
+                if side == 'SHORT':
+                    pnl_pct = (entry_price - exit_price) / entry_price
+                else:
+                    pnl_pct = (exit_price - entry_price) / entry_price
                 
             real_exit_idx = (entry_idx + 1) + local_exit_idx
             exit_time = arr_time[real_exit_idx]
