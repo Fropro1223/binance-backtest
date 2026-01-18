@@ -183,21 +183,16 @@ class VectorizedStrategy(Strategy):
             # -----------------------------------------------------------------
             # ADIM 6: SİNYALLERİ BİRLEŞTİR
             # -----------------------------------------------------------------
-            # NOT: EMA şu an DEVRE DIŞI - sadece pump + marubozu kullanılıyor
-            # EMA'yı aktif etmek için aşağıdaki satırları değiştir:
-            #   SHORT: all_bear & is_pump_up & is_marubozu
-            #   LONG: all_bull & is_pump_up & is_marubozu
+            # EMA + Pump + Marubozu kombinasyonu AKTİF
             
             if self.side == "SHORT":
                 # SHORT STRATEJİSİ:
-                # Yukarı pump + Marubozu = Geri dönüş beklentisi
-                # (EMA devre dışı: all_bear koşulu yok)
-                final_signal = is_pump_up & is_marubozu
+                # Ayı trendi (all_bear) + Yukarı pump + Marubozu = Geri dönüş
+                final_signal = all_bear & is_pump_up & is_marubozu
             else:  # LONG
                 # LONG STRATEJİSİ:
-                # Yukarı pump + Marubozu = Devam hareketi beklentisi
-                # (EMA devre dışı: all_bull koşulu yok)
-                final_signal = is_pump_up & is_marubozu
+                # Boğa trendi (all_bull) + Yukarı pump + Marubozu = Devam
+                final_signal = all_bull & is_pump_up & is_marubozu
             
             # -----------------------------------------------------------------
             # ADIM 7: SONUÇ KONTROLÜ VE DÖNÜŞ
