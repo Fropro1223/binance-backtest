@@ -135,16 +135,17 @@ class VectorizedStrategy(Strategy):
                         mask = mask & (val_fast < threshold)
                 return mask
 
-            # Kısa vadeli EMA'lar (hızlı hareket)
-            small_periods = [9, 20, 50, 100, 200]
-            # Uzun vadeli (bu versiyonda kapalı veya küçükler ile aynı)
-            # big_periods = [300, 500, 1000, 2000, 5000] # REMOVED to save data
+            # -----------------------------------------------------------------
+            # ALL EMA CONDITIONS (Must include up to 5000 if 'ema' is active)
+            # -----------------------------------------------------------------
+            # Periyotları __init__ kısmından alıyoruz (9...5000)
+            target_periods = self.periods
             
-            # BOĞA TRENDİ: Tüm EMA'lar yukarı sıralı
-            all_bull = check_chain(self.periods, 0.00001/100.0, bullish=True)
+            # BOĞA TRENDİ: Tüm EMA'lar yukarı sıralı (9 > 20 > ... > 5000)
+            all_bull = check_chain(target_periods, 0.00001/100.0, bullish=True)
             
-            # AYI TRENDİ: Tüm EMA'lar aşağı sıralı
-            all_bear = check_chain(self.periods, 0.0001/100.0, bullish=False)
+            # AYI TRENDİ: Tüm EMA'lar aşağı sıralı (9 < 20 < ... < 5000)
+            all_bear = check_chain(target_periods, 0.0001/100.0, bullish=False)
             
             # -----------------------------------------------------------------
             # ADIM 4: PUMP TESPİTİ
