@@ -91,74 +91,72 @@ class VectorizedStrategy(Strategy):
             lows = df['low']       # En düşük fiyatlar
             
             # -----------------------------------------------------------------
-            # ADIM 2: TÜM EMA'LARI HESAPLA (Vektörel)
+            # ADIM 2: EMA HESAPLAMA VE KONTROL (Conditional Optimization)
             # -----------------------------------------------------------------
-            # Her periyot için EMA hesapla ve sözlükte sakla
-            # ewm = Exponential Weighted Mean (Üstel Ağırlıklı Ortalama)
-            ema_dict = {}
-            for p in self.periods:
-                # span=p: Periyot uzunluğu
-                # adjust=False: Klasik EMA formülü
-                # min_periods=p: İlk p mum NaN olacak (yeterli veri yok)
-                ema_dict[p] = closes.ewm(span=p, adjust=False, min_periods=p).mean()
+            # Sadece seçilen filtreye uygun EMA'ları hesapla (Hız optimizasyonu)
             
-            # -----------------------------------------------------------------
-            # ADIM 3: EMA ZİNCİR KONTROLÜ
-            # -----------------------------------------------------------------
-            def check_chain(period_list, threshold_pct, bullish=True):
-                """
-                EMA zincirinin sıralı olup olmadığını kontrol et.
-                
-                Bullish (Boğa): EMA9 > EMA20 > EMA50 > ... (küçük > büyük)
-                Bearish (Ayı): EMA9 < EMA20 < EMA50 < ... (küçük < büyük)
-                
-                threshold_pct: Fark için minimum eşik (gürültüyü filtreler)
-                """
-                # Başlangıçta tüm satırlar True
-                mask = pd.Series(True, index=df.index)
-                
-                # Her ardışık EMA çiftini kontrol et
-                for i in range(len(period_list) - 1):
-                    fast_p = period_list[i]      # Hızlı EMA (kısa periyot)
-                    slow_p = period_list[i + 1]  # Yavaş EMA (uzun periyot)
-                    
-                    val_fast = ema_dict[fast_p]
-                    val_slow = ema_dict[slow_p]
-                    
-                    if bullish:
-                        # Boğa: Hızlı EMA, yavaş EMA'nın üzerinde olmalı
-                        threshold = val_slow * (1 + threshold_pct)
-                        mask = mask & (val_fast > threshold)
-                    else:
-                        # Ayı: Hızlı EMA, yavaş EMA'nın altında olmalı
-                        threshold = val_slow * (1 - threshold_pct)
-                        mask = mask & (val_fast < threshold)
-                return mask
+            ema_filter = None
 
-            # -----------------------------------------------------------------
-            # EMA CONDITIONS
-            # -----------------------------------------------------------------
-            # SMALL EMA (200'e kadar)
-            small_periods = [9, 20, 50, 100, 200]
-            small_bull = check_chain(small_periods, 0.00001/100.0, bullish=True)
-            small_bear = check_chain(small_periods, 0.0001/100.0, bullish=False)
+            # Hangi EMA'lar lazım?
+            needed_periods = []
+            if self.ema == "none":
+                needed_periods = []
+            elif "small" in self.ema:
+                needed_periods = [9, 20, 50, 100, 200]
+            elif "big" in self.ema:
+                needed_periods = [300, 500, 1000, 2000, 5000]
+            elif "all" in self.ema:
+                needed_periods = self.periods # [9...5000]
             
-            # BIG EMA (200'den büyük)
-            big_periods = [300, 500, 1000, 2000, 5000]
-            big_bull = check_chain(big_periods, 0.00001/100.0, bullish=True)
-            big_bear = check_chain(big_periods, 0.0001/100.0, bullish=False)
+            # Eğer EMA gerekliyse hesapla
+            if needed_periods:
+                ema_dict = {}
+                for p in needed_periods:
+                   ema_dict[p] = closes.ewm(span=p, adjust=False, min_periods=p).mean()
+                
+                # Zincir kontrol fonksiyonu (closure)
+                def check_chain_optimized(periods, bullish):
+                    mask = pd.Series(True, index=df.index)
+                    threshold_pct = 0.00001/100.0 if bullish else 0.0001/100.0
+                    
+                    for i in range(len(periods) - 1):
+                        fast_p = periods[i]
+                        slow_p = periods[i + 1]
+                        val_fast = ema_dict[fast_p]
+                        val_slow = ema_dict[slow_p]
+                        
+                        if bullish:
+                            # 9 > 20
+                            threshold = val_slow * (1 + threshold_pct)
+                            mask = mask & (val_fast > threshold)
+                        else:
+                            # 9 < 20
+                            threshold = val_slow * (1 - threshold_pct)
+                            mask = mask & (val_fast < threshold)
+                    return mask
+
+                # İlgili filtreyi uygula
+                if self.ema == "all_bull":
+                    ema_filter = check_chain_optimized(needed_periods, True)
+                elif self.ema == "all_bear":
+                    ema_filter = check_chain_optimized(needed_periods, False)
+                elif self.ema == "small_bull":
+                    ema_filter = check_chain_optimized(needed_periods, True)
+                elif self.ema == "small_bear":
+                    ema_filter = check_chain_optimized(needed_periods, False)
+                elif self.ema == "big_bull":
+                    ema_filter = check_chain_optimized(needed_periods, True)
+                elif self.ema == "big_bear":
+                    ema_filter = check_chain_optimized(needed_periods, False)
             
-            # ALL EMA (hepsi - self.periods'dan)
-            target_periods = self.periods
-            all_bull = check_chain(target_periods, 0.00001/100.0, bullish=True)
-            all_bear = check_chain(target_periods, 0.0001/100.0, bullish=False)
-            
+            # Eğer filtre hesaplanmadıysa (none veya hata), hepsi True
+            if ema_filter is None:
+                ema_filter = pd.Series(True, index=df.index)
+
             # -----------------------------------------------------------------
             # ADIM 4: PUMP TESPİTİ
             # -----------------------------------------------------------------
             # Pump = (Kapanış - Açılış) / Açılış
-            # Pozitif = Yeşil mum (yukarı pump)
-            # Negatif = Kırmızı mum (aşağı dump)
             pump_pct = (closes - opens) / opens
             is_pump_up = pump_pct > self.pump_threshold     # Yeşil pump
             is_pump_down = pump_pct < -self.pump_threshold  # Kırmızı dump
@@ -166,12 +164,6 @@ class VectorizedStrategy(Strategy):
             # -----------------------------------------------------------------
             # ADIM 5: MARUBOZU TESPİTİ
             # -----------------------------------------------------------------
-            # Marubozu = Fitilsiz veya çok az fitilli mum
-            # Formül: Gövde / Toplam Uzunluk >= Eşik
-            #
-            # Örnek: %80 eşik = Gövde, toplam mumun %80'i kadar olmalı
-            # Bu güçlü bir momentum göstergesi
-            
             body_size = (closes - opens).abs()  # Gövde büyüklüğü (mutlak değer)
             total_range = highs - lows          # Toplam mum uzunluğu (high-low)
             
@@ -182,34 +174,6 @@ class VectorizedStrategy(Strategy):
             
             # Eşik kontrolü
             is_marubozu = marubozu_ratio >= self.marubozu_threshold
-            
-            # -----------------------------------------------------------------
-            # ADIM 6: SİNYALLERİ BİRLEŞTİR
-            # -----------------------------------------------------------------
-            # Pump + Marubozu + EMA (BAĞIMSIZ)
-            
-            # EMA filtresi: Kullanıcı belirlediği duruma göre
-            if self.ema == "all_bull":
-                # ALL Bullish EMA: 9 > 20 > ... > 5000
-                ema_filter = all_bull
-            elif self.ema == "all_bear":
-                # ALL Bearish EMA: 9 < 20 < ... < 5000
-                ema_filter = all_bear
-            elif self.ema == "small_bull":
-                # SMALL Bullish EMA: 9 > 20 > 50 > 100 > 200
-                ema_filter = small_bull
-            elif self.ema == "small_bear":
-                # SMALL Bearish EMA: 9 < 20 < 50 < 100 < 200
-                ema_filter = small_bear
-            elif self.ema == "big_bull":
-                # BIG Bullish EMA: 300 > 500 > 1000 > 2000 > 5000
-                ema_filter = big_bull
-            elif self.ema == "big_bear":
-                # BIG Bearish EMA: 300 < 500 < 1000 < 2000 < 5000
-                ema_filter = big_bear
-            else:  # "none"
-                # EMA yok, tüm satırlar geçer
-                ema_filter = pd.Series(True, index=df.index)
             
             # Final signal: Pump + Marubozu + EMA (HER BİRİ BAĞIMSIZ)
             if self.side == "SHORT":
@@ -235,6 +199,7 @@ class VectorizedStrategy(Strategy):
         except Exception as e:
             # Hata durumunda sessizce None döndür
             # (Bazı semboller için veri eksik olabilir)
+            print(f"DEBUG ERROR: {e}")
             return None
 
     # =========================================================================
