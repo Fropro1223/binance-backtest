@@ -1,12 +1,9 @@
 """
 Vektörel EMA + Pump + Marubozu Stratejisi
 ==========================================
-Bu strateji tüm veriyi tek seferde işler (vektörel hesaplama).
-Döngü yerine Pandas/Numpy kullanarak çok hızlı çalışır.
-
-Kullanım:
-- LONG: Boğa trendinde pump sonrası devam
-- SHORT: Ayı trendinde pump sonrası geri dönüş
+Bu sınıf, piyasa verilerini vektörel (toplu) şekilde işleyerek hızlı backtest yapılmasını sağlar.
+Giriş sinyalleri (Pump/Dump), Marubozu mum yapısı ve opsiyonel EMA filtresi ile belirlenir.
+Sinyal yönü (LONG/SHORT) ve tetikleyici (PUMP/DUMP) birbirinden tamamen bağımsızdır.
 """
 
 from backtest_framework import Strategy
@@ -28,30 +25,25 @@ import polars as pl
 # =============================================================================
 
 
-class VectorizedStrategy(Strategy):
     """
-    Vektörel strateji - 3 koşulu birleştirir:
-    1. EMA Zinciri (Tüm EMA'lar sıralı mı?)
-    2. Pump Tespiti (Mum %X'den fazla hareket etti mi?)
-    3. Marubozu Tespiti (Mum gövdesi fitilsiz mi?)
+    Vektörel Strateji Sınıfı
+    ------------------------
+    Üç ana filtreyi (EMA, Pump/Dump, Marubozu) kullanarak giriş sinyali üretir.
+    Veriyi mum mum dönmek yerine tüm sütun üzerinde toplu işlem (Pandas/Polars) yaparak
+    performansı maksimize eder.
     """
     
-    # =========================================================================
-    # BÖLÜM 1: BAŞLATMA (INITIALIZATION)
+    # =VELÜM 1: BAŞLATMA (INITIALIZATION)
     # =========================================================================
     def __init__(self, tp=0.04, sl=0.02, tsl=0.0, bet_size=7.0, side="SHORT", cond="pump",
                  pump_threshold=0.02, dump_threshold=0.02, marubozu_threshold=0.80, ema="none", **kwargs):
         """
-        Strateji parametrelerini ayarla.
+        Strateji konfigürasyonunu ayarlar.
         
-        Parametreler:
-        - tp: Take Profit yüzdesi (0.02 = %2)
-        - sl: Stop Loss yüzdesi (0.02 = %2)  
-        - bet_size: Pozisyon büyüklüğü (USD)
-        - side: İşlem yönü ("LONG" veya "SHORT")
-        - pump_threshold: Pump eşiği (0.02 = %2 hareket)
-        - marubozu_threshold: Marubozu eşiği (0.80 = gövde >= %80)
-        - ema: EMA durumu ("bull" = yukarı sıralı, "bear" = aşağı sıralı, "none" = kullanma)
+        GELECEKTEKİ AGENTLAR İÇİN NOT:
+        - 'side' (LONG/SHORT) sadece işlem yönünü ve TP/SL mantığını belirler.
+        - 'cond' (pump/dump) ise giriş sinyalinin neye göre (yükseliş/düşüş) tetikleneceğini belirler.
+        Bu ikisi arasında sabit bir bağ yoktur; her kombinasyon test edilebilir.
         """
         super().__init__(bet_size=bet_size, tsl=tsl)
         
@@ -72,10 +64,7 @@ class VectorizedStrategy(Strategy):
     # BÖLÜM 2: DOSYA OKUMA
     # =========================================================================
     def process_file(self, filepath):
-        """
-        Parquet dosyasını oku ve işle.
-        Bu fonksiyon eski uyumluluk için var.
-        """
+        # Dosyayı okur ve veri işleme fonksiyonuna gönderir
         try:
             df = pd.read_parquet(filepath)
             return self.process_data(df)
@@ -87,23 +76,24 @@ class VectorizedStrategy(Strategy):
     # =========================================================================
     def process_data(self, df):
         """
-        Tüm veriyi vektörel olarak işle.
-        Her satır için döngü yapmadan, tüm hesaplamalar tek seferde yapılır.
+        Pandas DataFrame üzerinde vektörel sinyal hesaplaması yapar.
         
-        Döndürür: Polars DataFrame ('entry_signal' sütunu True olan mumlar sinyal)
+        AKIS:
+        1. Gerekli EMA indikatörlerini toplu hesaplar (sadece ihtiyaç duyulan periyotlar).
+        2. Mumların Pump (yükseliş) veya Dump (düşüş) durumlarını yüzdelik olarak belirler.
+        3. Marubozu oranlarını (gövde/fitil) hesaplar.
+        4. 'cond' parametresine göre sinyali (entry_signal) oluşturur.
         """
         try:
             # Boş veri kontrolü
             if df.empty:
                 return None
 
-            # -----------------------------------------------------------------
-            # ADIM 1: VERİ SÜTUNLARINI AYIKLA
-            # -----------------------------------------------------------------
-            closes = df['close']   # Kapanış fiyatları
-            opens = df['open']     # Açılış fiyatları
-            highs = df['high']     # En yüksek fiyatlar
-            lows = df['low']       # En düşük fiyatlar
+            # Fiyat sütunlarını al
+            closes = df['close']
+            opens = df['open']
+            highs = df['high']
+            lows = df['low']
             
             # -----------------------------------------------------------------
             # ADIM 2: EMA HESAPLAMA VE KONTROL (Conditional Optimization)
@@ -168,21 +158,14 @@ class VectorizedStrategy(Strategy):
             if ema_filter is None:
                 ema_filter = pd.Series(True, index=df.index)
 
-            # -----------------------------------------------------------------
-            # ADIM 4: PUMP TESPİTİ
-            # -----------------------------------------------------------------
-            # Pump = (Kapanış - Açılış) / Açılış
+            # Pump ve Dump durumlarını hesapla
             pump_pct = (closes - opens) / opens
-            is_pump_up = pump_pct > self.pump_threshold      # Yeşil pump
-            is_pump_down = pump_pct < -self.dump_threshold  # Kırmızı dump
+            is_pump_up = pump_pct > self.pump_threshold
+            is_pump_down = pump_pct < -self.dump_threshold
             
-            # -----------------------------------------------------------------
-            # ADIM 5: MARUBOZU TESPİTİ
-            # -----------------------------------------------------------------
-            body_size = (closes - opens).abs()  # Gövde büyüklüğü (mutlak değer)
-            total_range = highs - lows          # Toplam mum uzunluğu (high-low)
-            
-            # Sıfıra bölme hatası önleme
+            # Marubozu (gövde doluluğu) oranını hesapla
+            body_size = (closes - opens).abs()
+            total_range = highs - lows
             marubozu_ratio = pd.Series(0.0, index=df.index)
             valid_range = total_range > 0
             marubozu_ratio[valid_range] = body_size[valid_range] / total_range[valid_range]
