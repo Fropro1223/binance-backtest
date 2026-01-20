@@ -11,29 +11,22 @@ import pandas as pd
 import numpy as np
 import polars as pl
 
-# =============================================================================
-# IMPORTANT DEVELOPER NOTE (USER DIRECTIVE):
-# =============================================================================
-# SIDES (LONG/SHORT) ARE COMPLETELY INDEPENDENT OF TRIGGER CONDITIONS (PUMP/DUMP).
-# Any combination can be tested:
-# - LONG after PUMP (Trend Following)
-# - LONG after DUMP (Mean Reversion)
-# - SHORT after PUMP (Mean Reversion)
-# - SHORT after DUMP (Trend Following)
-#
-# DO NOT hardcode side-condition dependencies. The user decides via CLI.
-# =============================================================================
-
-
+class VectorizedStrategy(Strategy):
     """
     Vektörel Strateji Sınıfı
     ------------------------
     Üç ana filtreyi (EMA, Pump/Dump, Marubozu) kullanarak giriş sinyali üretir.
-    Veriyi mum mum dönmek yerine tüm sütun üzerinde toplu işlem (Pandas/Polars) yaparak
-    performansı maksimize eder.
+    Veriyi toplu işlem (Pandas/Polars) yaparak performansı maksimize eder.
+
+    GELECEKTEKİ AGENTLAR İÇİN KRİTİK NOT:
+    SIDES (LONG/SHORT) ve TRIGGER CONDITIONS (PUMP/DUMP) birbirinden TAMAMEN bağımsızdır:
+    - LONG after PUMP (Trend Following) veya LONG after DUMP (Mean Reversion)
+    - SHORT after PUMP (Mean Reversion) veya SHORT after DUMP (Trend Following)
+    Kodun içine hiçbir side-condition bağımlılığı sert şekilde yazılmamalıdır.
     """
     
-    # =VELÜM 1: BAŞLATMA (INITIALIZATION)
+    # =========================================================================
+    # BÖLÜM 1: BAŞLATMA (INITIALIZATION)
     # =========================================================================
     def __init__(self, tp=0.04, sl=0.02, tsl=0.0, bet_size=7.0, side="SHORT", cond="pump",
                  pump_threshold=0.02, dump_threshold=0.02, marubozu_threshold=0.80, ema="none", **kwargs):
@@ -95,9 +88,7 @@ import polars as pl
             highs = df['high']
             lows = df['low']
             
-            # -----------------------------------------------------------------
-            # ADIM 2: EMA HESAPLAMA VE KONTROL (Conditional Optimization)
-            # -----------------------------------------------------------------
+            # EMA filtrelemesi ve optimizasyonu
             # Sadece seçilen filtreye uygun EMA'ları hesapla (Hız optimizasyonu)
             
             ema_filter = None
@@ -119,7 +110,7 @@ import polars as pl
                 for p in needed_periods:
                    ema_dict[p] = closes.ewm(span=p, adjust=False, min_periods=p).mean()
                 
-                # Zincir kontrol fonksiyonu (closure)
+                # Zincir kontrol fonksiyonu
                 def check_chain_optimized(periods, bullish):
                     mask = pd.Series(True, index=df.index)
                     threshold_pct = 0.00001/100.0 if bullish else 0.0001/100.0
@@ -173,9 +164,7 @@ import polars as pl
             # Eşik kontrolü
             is_marubozu = marubozu_ratio >= self.marubozu_threshold
             
-            # DECOUPLED TRIGGER LOGIC:
-            # Side (Long/Short) is handled by the framework (tp/sl logic).
-            # This function only decides WHERE to enter based on 'cond'.
+            # Bağımsız giriş mantığı (Sadece 'cond' değerine bakar)
             
             if self.cond == "dump":
                 # Trigger on red marubozu drop
@@ -184,9 +173,7 @@ import polars as pl
                 # Trigger on green marubozu rise (default: pump)
                 final_signal = is_pump_up & is_marubozu & ema_filter
             
-            # -----------------------------------------------------------------
-            # ADIM 7: SONUÇ KONTROLÜ VE DÖNÜŞ
-            # -----------------------------------------------------------------
+            # Sonuçları kontrol et ve DataFrame'i döndür
             # Hiç sinyal yoksa None döndür
             if not final_signal.any():
                 return None
