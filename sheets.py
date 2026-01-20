@@ -369,7 +369,7 @@ def log_analysis_to_sheet(data: dict):
         except gspread.exceptions.WorksheetNotFound:
             print("✨ Creating 'Analysis' worksheet...")
             ws = sheet.add_worksheet(title="Analysis", rows="1000", cols="100")
-            headers_r1 = ["Timestamp", "Strategy", "Win Rate %", "Total Trades", "Total PnL ($)"]
+            headers_r1 = ["Timestamp", "Strategy", "", "", ""]
             ws.update(range_name="A1:E1", values=[headers_r1])
             ws.freeze(rows=2) # This was moved from later
         
@@ -378,7 +378,7 @@ def log_analysis_to_sheet(data: dict):
         # 1. Update Total PnL Header
         date_range = data.get('date_range', '')
         if date_range:
-            pnl_header = f"Total PnL ($)\n{date_range}"
+            pnl_header = "" # User wants C, D, E empty
             ws.update_cell(1, 5, pnl_header)
         
         # 2. Handle Weekly Columns
@@ -411,7 +411,7 @@ def log_analysis_to_sheet(data: dict):
                     tf_header_updates.append({'range': f"{gspread.utils.rowcol_to_a1(2, col_start)}:{gspread.utils.rowcol_to_a1(2, col_start+1)}", 'values': [["Trades", "PnL"]]})
                 
                 stats = tf_breakdown.get(tf, {})
-                row_data[col_start] = stats.get('trades_pct', 0.0)
+                row_data[col_start] = int(stats.get('trades', 0))
                 row_data[col_start+1] = stats.get('pnl', 0.0)
                 
             if tf_header_updates:
@@ -429,6 +429,7 @@ def log_analysis_to_sheet(data: dict):
         
         for week in weekly_stats:
             label = week['label']
+            week_num = week.get('week_num')
             trades = week['trades']
             pnl = week['pnl']
             
@@ -439,12 +440,10 @@ def log_analysis_to_sheet(data: dict):
                     found_col = i + 1
                     break
             
-            # Formatted Trades Percentage (Float)
-            total_trades_count = int(data.get('total_trades', 0))
-            if total_trades_count > 0:
-                trade_val = (trades / total_trades_count)
-            else:
-                trade_val = 0.0
+            # Formatted Trades (Absolute Count)
+            trade_val = int(trades)
+            # DEBUG for user verification
+            print(f"   📊 week {label}: {trades} trades")
                 
             # Formatted PnL (Absolute USD)
             pnl_val = pnl
@@ -453,6 +452,9 @@ def log_analysis_to_sheet(data: dict):
                 # Found existing week: Trades at found_col, PnL at found_col+1
                 row_data[found_col] = trade_val
                 row_data[found_col+1] = pnl_val
+                # Update week num in Row 1 just in case
+                if week_num:
+                    ws.update_cell(1, found_col+1, f"W{week_num:02d}")
             else:
                 # New Week
                 current_start = next_col_idx + (len(new_cols_group) * 2)
@@ -461,7 +463,9 @@ def log_analysis_to_sheet(data: dict):
                 
                 new_cols_group.append({
                     'label': label,
-                    'start_col': current_start
+                    'week_num': week_num,
+                    'start_col': current_start,
+                    'is_date': True # For font size styling later
                 })
         
         # Create Headers for New Weeks
@@ -471,15 +475,25 @@ def log_analysis_to_sheet(data: dict):
             for group in new_cols_group:
                 c_idx = group['start_col']
                 lbl = group['label']
+                wn = group.get('week_num')
+                wn_str = f"W{wn:02d}" if wn else ""
                 
                 # Prepare header values for this group (Row 1 & 2)
-                # We update the sheet in one go later or per group to be safer but more efficient than cell-by-cell
                 header_range = f"{gspread.utils.rowcol_to_a1(1, c_idx)}:{gspread.utils.rowcol_to_a1(2, c_idx+1)}"
                 values = [
-                    [lbl, ""],
+                    [lbl, wn_str],
                     ["Trades", "PnL"]
                 ]
                 header_batch_data.append({'range': header_range, 'values': values})
+                
+                # Apply font size 8 to the date label in Row 1
+                final_requests.append({
+                    "repeatCell": {
+                        "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx},
+                        "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 8}, "horizontalAlignment": "CENTER"}},
+                        "fields": "userEnteredFormat.textFormat.fontSize,userEnteredFormat.horizontalAlignment"
+                    }
+                })
             
             if header_batch_data:
                 try:
@@ -514,7 +528,25 @@ def log_analysis_to_sheet(data: dict):
             }
         })
 
-        # 2. Static Formats (C, D, E)
+        # 1. Formatting for Column A (Timestamp) - Font Size 7
+        final_requests.append({
+            "repeatCell": {
+                "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 0, "endColumnIndex": 1},
+                "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 7}}},
+                "fields": "userEnteredFormat.textFormat.fontSize"
+            }
+        })
+        
+        # 2. Formatting for Column B (Strategy) - Font Size 8
+        final_requests.append({
+            "repeatCell": {
+                "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 1, "endColumnIndex": 2},
+                "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 8}}},
+                "fields": "userEnteredFormat.textFormat.fontSize"
+            }
+        })
+        
+        # 3. Static Formats (C, D, E)
         def get_repeat_cell_req(range_a1, cell_format, fields):
             start, end = range_a1.split(":")
             sr, sc = gspread.utils.a1_to_rowcol(start)
@@ -534,22 +566,23 @@ def log_analysis_to_sheet(data: dict):
             }
 
         final_requests.append(get_repeat_cell_req("C3:C1000", 
-            {"numberFormat": {"type": "PERCENT", "pattern": "0.00%"}, "horizontalAlignment": "CENTER"},
-            "userEnteredFormat(numberFormat,horizontalAlignment)"))
+            {"numberFormat": {"type": "PERCENT", "pattern": "0%"}, "horizontalAlignment": "CENTER", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
+            "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
         
         final_requests.append(get_repeat_cell_req("D3:D1000", 
-            {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT"},
-            "userEnteredFormat(numberFormat,horizontalAlignment)"))
+            {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
+            "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
             
         final_requests.append(get_repeat_cell_req("E3:E1000", 
-            {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT"},
-            "userEnteredFormat(numberFormat,horizontalAlignment)"))
+            {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
+            "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
 
         # 3. Weekly Columns Formats & CF
         headers_r2_final = ws.row_values(2)
         week_pair_index = 0
         color_a = {"red": 1.0, "green": 1.0, "blue": 1.0}
         color_b = {"red": 0.93, "green": 0.93, "blue": 0.93}
+        color_tf = {"red": 0.95, "green": 0.97, "blue": 1.0} # Alice Blue
         
         current_cf_index = 0
         e_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 4, "endColumnIndex": 5}
@@ -568,16 +601,24 @@ def log_analysis_to_sheet(data: dict):
             
             is_trade = (val == "Trades") or (c_idx % 2 == 0)
             
-            if is_trade:
-                current_color = color_a if week_pair_index % 2 == 0 else color_b
-                week_pair_index += 1
+            # --- COLOR LOGIC ---
+            # F-Q: Timeframe Breakdown (Indices 6-17) -> Alternating White/Alice Blue PAIRS
+            if 6 <= c_idx <= 17:
+                # (6,7) pair 0, (8,9) pair 1, (10,11) pair 2...
+                pair_idx = (c_idx - 6) // 2
+                current_color = color_a if pair_idx % 2 == 0 else color_tf
             else:
-                current_color = color_a if (week_pair_index - 1) % 2 == 0 else color_b
+                # R onwards: Weekly Breakdown (Indices 18+) -> Alternating White/Gray
+                if is_trade:
+                    current_color = color_a if week_pair_index % 2 == 0 else color_b
+                    week_pair_index += 1
+                else:
+                    current_color = color_a if (week_pair_index - 1) % 2 == 0 else color_b
             
             col_range = {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
             
             # Formatting request
-            number_format = {"type": "PERCENT", "pattern": "0.0%"} if is_trade else {"type": "CURRENCY", "pattern": "$#,##0.00"}
+            number_format = {"type": "NUMBER", "pattern": "#,##0"} if is_trade else {"type": "CURRENCY", "pattern": "$#,##0"}
             
             final_requests.append({
                 "repeatCell": {
@@ -586,12 +627,52 @@ def log_analysis_to_sheet(data: dict):
                         "userEnteredFormat": {
                             "numberFormat": number_format,
                             "horizontalAlignment": "RIGHT",
-                            "backgroundColor": current_color
+                            "backgroundColor": current_color,
+                            "textFormat": {"fontSize": 9}
                         }
                     },
-                    "fields": "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor)"
+                    "fields": "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"
                 }
             })
+            
+            # --- ROW 2 LABEL STYLING (Trades / PnL) ---
+            if 6 <= c_idx:
+                # Target Row 2 for both TF and Weekly
+                # 0-indexed: Row 1 is startRowIndex 1, endRowIndex 2
+                label_range = {"sheetId": ws.id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
+                final_requests.append({
+                    "repeatCell": {
+                        "range": label_range,
+                        "cell": {
+                            "userEnteredFormat": {
+                                "horizontalAlignment": "CENTER",
+                                "textFormat": {"fontSize": 8, "bold": True}
+                            }
+                        },
+                        "fields": "userEnteredFormat(horizontalAlignment,textFormat)"
+                    }
+                })
+            
+            # --- ROW 1 HEADER STYLING (TF ONLY) ---
+            if 6 <= c_idx <= 17 and val == "Trades": # val="Trades" or val="PnL" labels in Row 2, but we target Row 1 cell above it
+                # Target the Merged Header in Row 1 (e.g., "5s", "10s")
+                # Since it's merged, we can just format the first cell of the pair.
+                tf_header_range = {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx+1}
+                final_requests.append({
+                    "repeatCell": {
+                        "range": tf_header_range,
+                        "cell": {
+                            "userEnteredFormat": {
+                                "horizontalAlignment": "CENTER",
+                                "textFormat": {
+                                    "bold": True,
+                                    "foregroundColor": {"red": 0.0, "green": 0.0, "blue": 0.8} # Dark Blue text
+                                }
+                            }
+                        },
+                        "fields": "userEnteredFormat(horizontalAlignment,textFormat)"
+                    }
+                })
             
             if val == "PnL":
                 pnl_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}

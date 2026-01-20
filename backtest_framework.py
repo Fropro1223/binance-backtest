@@ -26,8 +26,9 @@ class Strategy(ABC):
     """
     Abstract Base Class for all strategies.
     """
-    def __init__(self, bet_size: float = 7.0):
+    def __init__(self, bet_size: float = 7.0, tsl: float = 0.0):
         self.bet_size = bet_size
+        self.tsl = tsl
         self.trades: List[Trade] = []
 
     @abstractmethod
@@ -634,44 +635,71 @@ def process_single_pair_polars(args):
             
             # SL/TP Hits Logic
             if side == 'SHORT':
-                # SHORT: Stop if High >= SL, TP if Low <= TP
                 sl_hits = np.where(search_slice_high >= sl_price)[0]
                 tp_hits = np.where(search_slice_low <= tp_price)[0]
-            else: # LONG
-                # LONG: Stop if Low <= SL, TP if High >= TP
+            else:
                 sl_hits = np.where(search_slice_low <= sl_price)[0]
                 tp_hits = np.where(search_slice_high >= tp_price)[0]
             
             first_sl_idx = sl_hits[0] if len(sl_hits) > 0 else 999999999
             first_tp_idx = tp_hits[0] if len(tp_hits) > 0 else 999999999
             
-            if first_sl_idx == 999999999 and first_tp_idx == 999999999:
-                break # Never exits
-                
+            # Default Exit Info (Static)
             if first_sl_idx <= first_tp_idx:
                 local_exit_idx = first_sl_idx
                 exit_type = "SL"
                 exit_price = sl_price
-                
-                # Check for instant gap-over SL (Open of next candle exceeds SL?)
-                # This logic checks High/Low only. Assuming intra-candle execution.
-                # Ideally check OPEN of exit candle vs SL to see if we gapped.
-                # For now, sticking to simple hit logic.
-                
-                if side == 'SHORT':
-                    pnl_pct = (entry_price - exit_price) / entry_price
-                else:
-                    pnl_pct = (exit_price - entry_price) / entry_price
-
             else:
                 local_exit_idx = first_tp_idx
                 exit_type = "TP"
                 exit_price = tp_price
                 
+            # --- TRAILING SL OVERRIDE ---
+            if strategy.tsl > 0:
+                # 1. Calculate 'Best Price' history including entry_price
                 if side == 'SHORT':
-                    pnl_pct = (entry_price - exit_price) / entry_price
-                else:
-                    pnl_pct = (exit_price - entry_price) / entry_price
+                    prices_to_track = np.concatenate([[entry_price], arr_low[entry_idx+1:]])
+                    best_history = np.minimum.accumulate(prices_to_track)
+                else: # LONG
+                    prices_to_track = np.concatenate([[entry_price], arr_high[entry_idx+1:]])
+                    best_history = np.maximum.accumulate(prices_to_track)
+
+                # 2. Trigger Level at any step depends on the best price seen TILL PREVIOUS step
+                # We use a loop or shifted array for precision. Vectorized shift:
+                # trigger_levels[i] corresponds to candle entry_idx + i
+                # It should use best_history[i-1]
+                
+                for step_idx in range(1, len(best_history)):
+                    # real_idx is the candle we are checking for EXIT
+                    real_idx = entry_idx + step_idx
+                    if real_idx >= max_idx: break
+                    
+                    prev_best = best_history[step_idx - 1]
+                    
+                    if side == 'SHORT':
+                        current_trigger = prev_best * (1 + strategy.tsl)
+                        hit = arr_high[real_idx] >= current_trigger
+                    else: # LONG
+                        current_trigger = prev_best * (1 - strategy.tsl)
+                        hit = arr_low[real_idx] <= current_trigger
+                    
+                    if hit:
+                        # step_idx is relative to entry_idx. 
+                        # matching with local_exit_idx (which is relative to entry_idx+1)
+                        search_slice_idx = step_idx - 1
+                        if search_slice_idx < local_exit_idx:
+                            local_exit_idx = search_slice_idx
+                            exit_type = "TSL"
+                            exit_price = current_trigger
+                        break # Found first TSL hit for this trade
+
+            if local_exit_idx == 999999999:
+                break # Never exits
+                
+            if side == 'SHORT':
+                pnl_pct = (entry_price - exit_price) / entry_price
+            else:
+                pnl_pct = (exit_price - entry_price) / entry_price
                 
             real_exit_idx = (entry_idx + 1) + local_exit_idx
             exit_time = arr_time[real_exit_idx]

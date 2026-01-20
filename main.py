@@ -52,8 +52,18 @@ def parse_args():
                         choices=['LONG', 'SHORT'],
                         help='Pozisyon yönü: LONG veya SHORT (varsayılan: SHORT)')
     
+    parser.add_argument('--cond', type=str, default='pump',
+                        choices=['pump', 'dump'],
+                        help='Giriş koşulu: pump (yükseliş) veya dump (düşüş)')
+    
     parser.add_argument('--pump', type=float, default=2.0,
                         help='Pump threshold yüzdesi (varsayılan: 2)')
+    
+    parser.add_argument('--dump', type=float, default=2.0,
+                        help='Dump threshold yüzdesi (varsayılan: 2)')
+    
+    parser.add_argument('--tsl', type=float, default=0.0,
+                        help='Trailing Stop Loss yüzdesi (örn: 1 = %1, 0 = kapalı, varsayılan: 0)')
     
     parser.add_argument('--marubozu', type=float, default=0.80,
                         help='Marubozu eşik değeri 0-1 arası (varsayılan: 0.80)')
@@ -97,6 +107,7 @@ def main():
     TP_PCT = args.tp / 100.0
     SL_PCT = args.sl / 100.0
     PUMP_THRESHOLD = args.pump / 100.0
+    DUMP_THRESHOLD = args.dump / 100.0
     MARUBOZU_THRESHOLD = args.marubozu
     BET_SIZE = args.bet
     MAX_POSITIONS = args.max_pos
@@ -106,7 +117,7 @@ def main():
     # Build strategy name for logging
     # USER RULE: Always include ALL details (Side, EMA, Pump, TP, SL, Marubozu)
     ema_str = f"EMA:{args.ema.capitalize()}"
-    STRATEGY_NAME_LOG = f"[{SIDE}] {args.tf if args.tf else "AllTF"} {ema_str} Pump:{args.pump}% TP:{args.tp}% SL:{args.sl}% Maru:{args.marubozu}"
+    STRATEGY_NAME_LOG = f"[{args.side}] {args.cond.upper()} {args.strategy.upper()} EMA:{args.ema.title()} Pump:{args.pump}% Dump:{args.dump}% TP:{args.tp}% SL:{args.sl}% TSL:{args.tsl}% M:{args.marubozu}"
     
     # If using specific EMA logic hardcoded in strategy, we might want to append it.
     # For now, this covers the CLI args.
@@ -145,15 +156,18 @@ def main():
     results = engine.run(
         SELECTED_CONDITIONS, 
         action_func=SELECTED_ACTION,
+        cond=args.cond,
         max_positions=MAX_POSITIONS,
         avg_threshold=AVG_THRESHOLD,
         pump_threshold=PUMP_THRESHOLD, 
+        dump_threshold=DUMP_THRESHOLD,
         marubozu_threshold=MARUBOZU_THRESHOLD, 
         tp=TP_PCT, 
         sl=SL_PCT, 
+        tsl=args.tsl / 100.0,
         bet_size=BET_SIZE,
         side=SIDE,
-        ema=args.ema,  # CRITICAL: Pass EMA state to strategy!
+        ema=args.ema,
         parallel=not args.serial,
         check_current_candle=check_current_candle,
         tf_filter=args.tf
@@ -308,12 +322,14 @@ def main():
                 # Format Label
                 # Label typically shows Week END? or Range?
                 # User likes: "11.01-18.01" (Start-End)
-                w_start_str = ws.strftime('%d.%m')
-                w_end_str = we.strftime('%d.%m')
+                w_start_str = ws.strftime('%d/%m')
+                w_end_str = we.strftime('%d/%m')
+                week_num = ws.isocalendar()[1]
                 label = f"{w_start_str}-{w_end_str}"
                 
                 weekly_stats.append({
                     'label': label,
+                    'week_num': week_num,
                     'trades': len(week_trades),
                     'pnl': week_trades['pnl_usd'].sum()
                 })

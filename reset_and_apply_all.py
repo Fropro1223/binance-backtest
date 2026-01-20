@@ -58,7 +58,7 @@ def reset_and_apply_all():
     
     color_white = {"red": 1.0, "green": 1.0, "blue": 1.0}
     color_gray = {"red": 0.96, "green": 0.96, "blue": 0.96} # Light gray (Weeks)
-    color_darker_gray = {"red": 0.88, "green": 0.88, "blue": 0.88} # Darker gray (Metrics)
+    color_black = {"red": 0.0, "green": 0.0, "blue": 0.0} # Black (Metrics)
     color_light_blue = {"red": 0.95, "green": 0.97, "blue": 1.0} # Alice Blueish
     
     headers_row2 = ws.row_values(2)
@@ -78,9 +78,11 @@ def reset_and_apply_all():
         if col_idx < 2:
              current_color = color_white
         
-        # C-D-E: Metrics (Indices 2, 3, 4) -> Solid Darker Gray
+        # C-D-E: Metrics (Indices 2, 3, 4) -> Solid Black
         elif 2 <= col_idx < 5:
-            current_color = color_darker_gray
+            current_color = color_black
+            # We also need white text for these, but this loop only does background.
+            # We'll add textFormat in the next section where alignment is handled.
              
         # F-Q: Timeframe Breakdown (Indices 5-16)
         elif 5 <= col_idx < 17:
@@ -129,28 +131,46 @@ def reset_and_apply_all():
     print("   3. Applying Number Formats & Alignment...")
     fmt_reqs = []
     
-    # C: Win Rate %
+    # A: Timestamp (Font Size 7)
+    fmt_reqs.append({
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": 0, "endColumnIndex": 1},
+            "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 7}}},
+            "fields": "userEnteredFormat.textFormat.fontSize"
+        }
+    })
+    
+    # B: Strategy (Font Size 8)
+    fmt_reqs.append({
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": 1, "endColumnIndex": 2},
+            "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 8}}},
+            "fields": "userEnteredFormat.textFormat.fontSize"
+        }
+    })
+    
+    # C: Win Rate % (Size 9)
     fmt_reqs.append({
         "repeatCell": {
             "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": 2, "endColumnIndex": 3},
-            "cell": {"userEnteredFormat": {"numberFormat": {"type": "PERCENT", "pattern": "0%"}, "horizontalAlignment": "CENTER"}},
-            "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment"
+            "cell": {"userEnteredFormat": {"numberFormat": {"type": "PERCENT", "pattern": "0.00%"}, "horizontalAlignment": "CENTER", "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}}},
+            "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
         }
     })
-    # D: Trades (Number) - Already Integer but verify
+    # D: Trades (Number) - Font Size 9
     fmt_reqs.append({
         "repeatCell": {
             "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": 3, "endColumnIndex": 4},
-            "cell": {"userEnteredFormat": {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT"}},
-            "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment"
+            "cell": {"userEnteredFormat": {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT", "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}}},
+            "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
         }
     })
-    # E: PnL (Currency) - Remove decimals
+    # E: PnL (Currency) - Font Size 9
     fmt_reqs.append({
         "repeatCell": {
             "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": 4, "endColumnIndex": 5},
-            "cell": {"userEnteredFormat": {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT"}},
-            "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment"
+            "cell": {"userEnteredFormat": {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT", "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}}},
+            "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
         }
     })
     
@@ -161,14 +181,16 @@ def reset_and_apply_all():
         col_idx = i
         
         # Determine format based on header name (Trades%, PnL)
-        if "Trades" in val or "PnL" in val:
-             fmt_reqs.append({
-                "repeatCell": {
-                    "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": col_idx, "endColumnIndex": col_idx+1},
-                    "cell": {"userEnteredFormat": {"numberFormat": {"type": "PERCENT", "pattern": "0%"}, "horizontalAlignment": "RIGHT"}},
-                    "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment"
-                }
-            })
+        is_trade = "Trades" in val
+        number_format = {"type": "NUMBER", "pattern": "#,##0"} if is_trade else {"type": "CURRENCY", "pattern": "$#,##0"}
+        
+        fmt_reqs.append({
+            "repeatCell": {
+                "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": col_idx, "endColumnIndex": col_idx+1},
+                "cell": {"userEnteredFormat": {"numberFormat": number_format, "horizontalAlignment": "RIGHT", "textFormat": {"fontSize": 9}}},
+                "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+            }
+        })
 
     sheet.batch_update({"requests": fmt_reqs})
     print("   ✅ Number formats applied.")
@@ -222,13 +244,51 @@ def reset_and_apply_all():
         sheet.batch_update({"requests": cf_requests})
         print(f"   ✅ {len(cf_requests)} CF rules applied.")
     
-    # 5. Bold Headers
-    print("   5. Bolding Headers...")
+    # 5. Bold Headers and specific labels
+    print("   5. Bolding Headers and naming Strategy...")
+    # Explicitly set B1 to "Strategy"
+    ws.update_cell(1, 2, "Strategy")
+    
     sheet.batch_update({"requests": [{
         "repeatCell": {
-            "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 2},
+            "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 5},
             "cell": {"userEnteredFormat": {"textFormat": {"bold": True}}},
             "fields": "userEnteredFormat.textFormat.bold"
+        }
+    }]})
+
+    # TF Headers (F-Q) Row 1
+    sheet.batch_update({"requests": [{
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 5, "endColumnIndex": 17},
+            "cell": {
+                "userEnteredFormat": {
+                    "textFormat": {
+                        "bold": True, 
+                        "foregroundColor": {"red": 0.0, "green": 0.0, "blue": 0.8}
+                    }, 
+                    "horizontalAlignment": "CENTER"
+                }
+            },
+            "fields": "userEnteredFormat.textFormat,userEnteredFormat.horizontalAlignment"
+        }
+    }]})
+    
+    # Weekly & Generic Headers bolding (Remaining Row 2)
+    sheet.batch_update({"requests": [{
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": 5, "endColumnIndex": 100},
+            "cell": {"userEnteredFormat": {"textFormat": {"bold": True, "fontSize": 8}, "horizontalAlignment": "CENTER"}},
+            "fields": "userEnteredFormat.textFormat,userEnteredFormat.horizontalAlignment"
+        }
+    }]})
+    
+    # Weekly Row 1 bolding and font size 8
+    sheet.batch_update({"requests": [{
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 17, "endColumnIndex": 100},
+            "cell": {"userEnteredFormat": {"textFormat": {"bold": True, "fontSize": 8}, "horizontalAlignment": "CENTER"}},
+            "fields": "userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.fontSize,userEnteredFormat.horizontalAlignment"
         }
     }]})
     

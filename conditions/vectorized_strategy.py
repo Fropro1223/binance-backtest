@@ -14,6 +14,19 @@ import pandas as pd
 import numpy as np
 import polars as pl
 
+# =============================================================================
+# IMPORTANT DEVELOPER NOTE (USER DIRECTIVE):
+# =============================================================================
+# SIDES (LONG/SHORT) ARE COMPLETELY INDEPENDENT OF TRIGGER CONDITIONS (PUMP/DUMP).
+# Any combination can be tested:
+# - LONG after PUMP (Trend Following)
+# - LONG after DUMP (Mean Reversion)
+# - SHORT after PUMP (Mean Reversion)
+# - SHORT after DUMP (Trend Following)
+#
+# DO NOT hardcode side-condition dependencies. The user decides via CLI.
+# =============================================================================
+
 
 class VectorizedStrategy(Strategy):
     """
@@ -26,8 +39,8 @@ class VectorizedStrategy(Strategy):
     # =========================================================================
     # BÖLÜM 1: BAŞLATMA (INITIALIZATION)
     # =========================================================================
-    def __init__(self, tp=0.04, sl=0.02, bet_size=7.0, side="SHORT",
-                 pump_threshold=0.02, marubozu_threshold=0.80, ema="none", **kwargs):
+    def __init__(self, tp=0.04, sl=0.02, tsl=0.0, bet_size=7.0, side="SHORT", cond="pump",
+                 pump_threshold=0.02, dump_threshold=0.02, marubozu_threshold=0.80, ema="none", **kwargs):
         """
         Strateji parametrelerini ayarla.
         
@@ -40,13 +53,15 @@ class VectorizedStrategy(Strategy):
         - marubozu_threshold: Marubozu eşiği (0.80 = gövde >= %80)
         - ema: EMA durumu ("bull" = yukarı sıralı, "bear" = aşağı sıralı, "none" = kullanma)
         """
-        super().__init__(bet_size=bet_size)
+        super().__init__(bet_size=bet_size, tsl=tsl)
         
         # Temel parametreler
         self.tp = tp                          # Take Profit
         self.sl = sl                          # Stop Loss
-        self.side = side                      # LONG veya SHORT
-        self.pump_threshold = pump_threshold  # Pump eşiği
+        self.side = side                      # LONG veya SHORT (Trade Direction)
+        self.cond = cond.lower()              # pump veya dump (Trigger Condition)
+        self.pump_threshold = pump_threshold  # % Rise threshold
+        self.dump_threshold = dump_threshold  # % Drop threshold
         self.marubozu_threshold = marubozu_threshold  # Marubozu eşiği
         self.ema = ema.lower()                # EMA durumu (bull/bear/none)
         
@@ -158,8 +173,8 @@ class VectorizedStrategy(Strategy):
             # -----------------------------------------------------------------
             # Pump = (Kapanış - Açılış) / Açılış
             pump_pct = (closes - opens) / opens
-            is_pump_up = pump_pct > self.pump_threshold     # Yeşil pump
-            is_pump_down = pump_pct < -self.pump_threshold  # Kırmızı dump
+            is_pump_up = pump_pct > self.pump_threshold      # Yeşil pump
+            is_pump_down = pump_pct < -self.dump_threshold  # Kırmızı dump
             
             # -----------------------------------------------------------------
             # ADIM 5: MARUBOZU TESPİTİ
@@ -175,10 +190,15 @@ class VectorizedStrategy(Strategy):
             # Eşik kontrolü
             is_marubozu = marubozu_ratio >= self.marubozu_threshold
             
-            # Final signal: Pump + Marubozu + EMA (HER BİRİ BAĞIMSIZ)
-            if self.side == "SHORT":
-                final_signal = is_pump_up & is_marubozu & ema_filter
-            else:  # LONG
+            # DECOUPLED TRIGGER LOGIC:
+            # Side (Long/Short) is handled by the framework (tp/sl logic).
+            # This function only decides WHERE to enter based on 'cond'.
+            
+            if self.cond == "dump":
+                # Trigger on red marubozu drop
+                final_signal = is_pump_down & is_marubozu & ema_filter
+            else:
+                # Trigger on green marubozu rise (default: pump)
                 final_signal = is_pump_up & is_marubozu & ema_filter
             
             # -----------------------------------------------------------------
