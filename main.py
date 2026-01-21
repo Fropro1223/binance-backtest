@@ -1,8 +1,14 @@
-#!/usr/bin/env python3
 """
-Modular Backtest Runner
-=======================
-CLI destekli backtest sistemi. Strateji parametrelerini komut satırından alır.
+Binance Backtest Ana Çalıştırıcı (main.py)
+==========================================
+Bu dosya backtest süreçlerini başlatır, parametreleri yönetir ve sonuçları Google Sheets'e loglar.
+
+GELECEKTEKİ AGENTLAR İÇİN KRİTİK KURALLAR (USER DIRECTIVE):
+1. SEQUENTIAL BATCHING: Toplu deneyler (loop) Google Sheets API limitleri için MUTLAKA tek tek (sequential) çalıştırılmalıdır.
+2. INTERNAL PARALLELISM: Tek bir backtest çalışırken pairlar MUTLAKA 8 çekirdek (CPU core) ile paralel işlenmelidir.
+3. STRATEGY CHOICE: Her zaman 'vectorized' stratejisi kullanılmalıdır.
+4. DATA LOGIC: Strateji hesaplamalarında her zaman Pandas kullanılmalıdır.
+5. SHEETS LOGGING: Strateji ismi (VECTORIZED) Sheets loglarındaki isim sütununa yazılmamalıdır (yer kaplamaması için).
 
 Kullanım:
     python main.py --strategy pump_short --tp 4 --sl 2
@@ -71,6 +77,9 @@ def parse_args():
     parser.add_argument('--bet', type=float, default=7.0,
                         help='Pozisyon büyüklüğü USD (varsayılan: 7)')
     
+    parser.add_argument('--workers', type=int, default=8,
+                        help='Paralel işlem için çekirdek sayısı (varsayılan: 8)')
+    
     parser.add_argument('--max-pos', type=int, default=1,
                         help='Maksimum eşzamanlı pozisyon (varsayılan: 1)')
     
@@ -115,9 +124,18 @@ def main():
     SIDE = args.side
     
     # Build strategy name for logging
-    # USER RULE: Always include ALL details (Side, EMA, Pump, TP, SL, Marubozu)
-    ema_str = f"EMA:{args.ema.capitalize()}"
-    STRATEGY_NAME_LOG = f"[{args.side}] {args.cond.upper()} {args.strategy.upper()} EMA:{args.ema.title()} Pump:{args.pump}% Dump:{args.dump}% TP:{args.tp}% SL:{args.sl}% TSL:{args.tsl}% M:{args.marubozu}"
+    ema_str = f"EMA:{args.ema.title()}"
+    maru_str = f"M:{args.marubozu}"
+    target_str = f"TP:{args.tp}% SL:{args.sl}%"
+    tsl_str = f"TSL:{args.tsl}%" if args.tsl > 0 else "TSL:OFF"
+    
+    # Show only the threshold being USED
+    if args.cond == "pump":
+        cond_val_str = f"Pump:{args.pump}%"
+    else:
+        cond_val_str = f"Dump:{args.dump}%"
+
+    STRATEGY_NAME_LOG = f"[{args.side}] {args.cond.upper()} {ema_str} {cond_val_str} {target_str} {tsl_str} {maru_str}"
     
     # If using specific EMA logic hardcoded in strategy, we might want to append it.
     # For now, this covers the CLI args.
@@ -370,7 +388,8 @@ def main():
             'worst_trade': results['pnl_usd'].min(),
             'date_range': overall_date_range,
             'weekly_stats': weekly_stats,
-            'tf_breakdown': tf_breakdown  # Pass this to sheets
+            'tf_breakdown': tf_breakdown,  # Pass this to sheets
+            'total_days': 90 # Standard lookback
         }
         
         try:

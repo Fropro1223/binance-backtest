@@ -18,7 +18,7 @@ def get_credentials_path():
         return Path(env_path)
     return Path(DEFAULT_CREDS_PATH)
 
-def upload_to_sheets(csv_path_str):
+def upload_to_sheets(csv_path_str, total_days=None):
     try:
         csv_path = Path(csv_path_str)
         if not csv_path.exists():
@@ -369,36 +369,144 @@ def log_analysis_to_sheet(data: dict):
         except gspread.exceptions.WorksheetNotFound:
             print("✨ Creating 'Analysis' worksheet...")
             ws = sheet.add_worksheet(title="Analysis", rows="1000", cols="100")
-            headers_r1 = ["Timestamp", "Strategy", "", "", ""]
-            ws.update(range_name="A1:E1", values=[headers_r1])
-            ws.freeze(rows=2) # This was moved from later
+            ws.freeze(rows=2)
+        
+        # --- NEW STRUCTURE: 10 Parameter Columns After Strategy ---
+        # Columns: A=Timestamp, B=Strategy, C-L=Parameters (10), M=WinRate, N=Trades, O=PnL
+        
+        # Define parameter columns (C through L, indices 3-12)
+        PARAM_COLS = {
+            3: {"header": "Side", "options": ["SHORT", "LONG"]},
+            4: {"header": "Cond", "options": ["pump", "dump"]},
+            5: {"header": "EMA", "options": ["none", "all_bull", "all_bear", "small_bull", "small_bear", "big_bull", "big_bear", "small_bull_big_bull", "small_bear_big_bear", "small_bull_big_bear", "small_bear_big_bull"]},
+            6: {"header": "Pump%", "options": ["1", "2", "3", "4", "5"]},
+            7: {"header": "Dump%", "options": ["1", "2", "3", "4", "5"]},
+            8: {"header": "TP%", "options": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]},
+            9: {"header": "SL%", "options": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]},
+            10: {"header": "TSL%", "options": ["OFF", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]},
+            11: {"header": "Maru", "options": ["0.5", "0.6", "0.7", "0.8", "0.9"]}
+            # Note: Days (column 12) has no dropdown - it's purely informational
+        }
+        
+        # Metrics start at column 13 (M)
+        METRICS_START_COL = 13
+        
+        # Check if headers need to be set up
+        headers_r2 = ws.row_values(2)
+        if len(headers_r2) < 12 or headers_r2[2] != "Side":
+            print("✨ Setting up 10 parameter columns with dropdowns...")
+            
+            # Set Row 2 headers for parameters
+            param_headers = [PARAM_COLS[i]["header"] for i in range(3, 13)]
+            ws.update(range_name="C2:L2", values=[param_headers])
+            
+            # Set Row 2 headers for metrics (M, N, O)
+            ws.update(range_name="M2:O2", values=[["Win Rate", "Trades", "PnL ($)"]])
+            
+            # Add Data Validation (Dropdowns) for each parameter column
+            dv_requests = []
+            for col_idx, config in PARAM_COLS.items():
+                options_str = ",".join(config["options"])
+                dv_requests.append({
+                    "setDataValidation": {
+                        "range": {
+                            "sheetId": ws.id,
+                            "startRowIndex": 2,  # Row 3 onwards
+                            "endRowIndex": 1000,
+                            "startColumnIndex": col_idx - 1,  # 0-indexed
+                            "endColumnIndex": col_idx
+                        },
+                        "rule": {
+                            "condition": {
+                                "type": "ONE_OF_LIST",
+                                "values": [{"userEnteredValue": opt} for opt in config["options"]]
+                            },
+                            "showCustomUi": True,
+                            "strict": False
+                        }
+                    }
+                })
+            
+            # Apply data validation
+            if dv_requests:
+                sheet.batch_update({"requests": dv_requests})
+                print(f"✅ Added dropdowns to {len(dv_requests)} columns")
         
         # --- DYNAMIC HEADER LOGIC ---
-        
-        # 1. Update Total PnL Header
-        date_range = data.get('date_range', '')
-        if date_range:
-            pnl_header = "" # User wants C, D, E empty
-            ws.update_cell(1, 5, pnl_header)
-        
-        # 2. Handle Weekly Columns
+        total_days = data.get('total_days', 90)
         headers_r1 = ws.row_values(1)
         
-        # Row Data Map (New columns will be added here)
-        # 1-based indices
+        # Row Data Map (1-based indices, shifted for new structure)
+        # A=1, B=2, C-L=3-12 (params), M=13 (WinRate), N=14 (Trades), O=15 (PnL)
         row_data = {}
         row_data[1] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         row_data[2] = data.get('strategy_name', 'Unknown')
-        row_data[3] = float(data.get('win_rate', 0))/100.0
-        row_data[4] = int(data.get('total_trades', 0))
-        row_data[5] = float(data.get('total_pnl', 0))
         
-        # 3. Timeframe Breakdown (F-Q)
+        # Parse strategy_name to extract parameters for dropdown columns
+        # Format: "[SHORT] PUMP EMA:None Pump:2.0% TP:8.0% SL:8.0% TSL:1% M:0.8"
+        strategy_str = data.get('strategy_name', '')
+        
+        # Extract Side
+        if "[SHORT]" in strategy_str:
+            row_data[3] = "SHORT"
+        elif "[LONG]" in strategy_str:
+            row_data[3] = "LONG"
+        else:
+            row_data[3] = ""
+        
+        # Extract Cond
+        if "PUMP" in strategy_str.upper():
+            row_data[4] = "pump"
+        elif "DUMP" in strategy_str.upper():
+            row_data[4] = "dump"
+        else:
+            row_data[4] = ""
+        
+        # Extract EMA
+        import re
+        ema_match = re.search(r'EMA:(\S+)', strategy_str)
+        row_data[5] = ema_match.group(1).lower() if ema_match else "none"
+        
+        # Extract Pump%
+        pump_match = re.search(r'Pump:(\d+\.?\d*)%', strategy_str)
+        row_data[6] = pump_match.group(1) if pump_match else ""
+        
+        # Extract Dump%
+        dump_match = re.search(r'Dump:(\d+\.?\d*)%', strategy_str)
+        row_data[7] = dump_match.group(1) if dump_match else ""
+        
+        # Extract TP%
+        tp_match = re.search(r'TP:(\d+\.?\d*)%', strategy_str)
+        row_data[8] = tp_match.group(1) if tp_match else ""
+        
+        # Extract SL%
+        sl_match = re.search(r'SL:(\d+\.?\d*)%', strategy_str)
+        row_data[9] = sl_match.group(1) if sl_match else ""
+        
+        # Extract TSL%
+        tsl_match = re.search(r'TSL:(\d+\.?\d*|OFF)%?', strategy_str)
+        row_data[10] = tsl_match.group(1) if tsl_match else "OFF"
+        
+        # Extract Marubozu
+        maru_match = re.search(r'M:(\d+\.?\d*)', strategy_str)
+        row_data[11] = maru_match.group(1) if maru_match else ""
+        
+        # Days
+        row_data[12] = str(total_days)
+        
+        # Metrics (shifted to columns 13, 14, 15)
+        row_data[METRICS_START_COL] = float(data.get('win_rate', 0))/100.0
+        row_data[METRICS_START_COL + 1] = int(data.get('total_trades', 0))
+        row_data[METRICS_START_COL + 2] = float(data.get('total_pnl', 0))
+        
+        # 3. Timeframe Breakdown (P onwards = column 16+)
+        # Shifted by 10 for new parameter columns
         tf_breakdown = data.get('tf_breakdown', {})
         if tf_breakdown:
             print(f"📊 Processing Timeframe Breakdown for Sheets...")
-            # Map TF to Start Column Index (1-based)
-            tf_map = {'5s': 6, '10s': 8, '15s': 10, '30s': 12, '45s': 14, '1m': 16}
+            # Map TF to Start Column Index (1-based, shifted by +10)
+            # Old: 6, 8, 10, 12, 14, 16 → New: 16, 18, 20, 22, 24, 26
+            tf_map = {'5s': 16, '10s': 18, '15s': 20, '30s': 22, '45s': 24, '1m': 26}
             
             # Initialize TF Headers if Row 2 is empty/incomplete
             headers_r2_current = ws.row_values(2)
@@ -423,9 +531,12 @@ def log_analysis_to_sheet(data: dict):
         weekly_stats = data.get('weekly_stats', [])
         new_cols_group = []
         next_col_idx = len(headers_r1) + 1
-        # Ensure we don't overwrite TF columns if headers are missing
-        if next_col_idx < 18:
-             next_col_idx = 18
+        # Ensure we don't overwrite TF columns (now ending at 27)
+        if next_col_idx < 28:
+             next_col_idx = 28
+        
+        # Initialize final_requests early (used in weekly stats section)
+        final_requests = []
         
         for week in weekly_stats:
             label = week['label']
@@ -513,194 +624,247 @@ def log_analysis_to_sheet(data: dict):
             
         ws.insert_row(final_values, index=3, value_input_option='USER_ENTERED')
         
-        # --- FORMATTING & CF (Row 3+) ---
-        ws.freeze(rows=2)
+        # --- APPLY FORMATTING ---
+        try:
+            apply_sheet_formatting(ws, ws.row_values(2))
+        except Exception as fmt_err:
+             print(f"⚠️ Formatting update warning: {fmt_err}")
         
-        # Collect ALL formatting and CF requests into a single batch_update
-        final_requests = []
-        
-        # 1. Hide Timestamp Column
-        final_requests.append({
-            "updateDimensionProperties": {
-                "range": {"sheetId": ws.id, "dimension": "COLUMNS", "startIndex": 0, "endIndex": 1},
-                "properties": {"hiddenByUser": True},
-                "fields": "hiddenByUser"
-            }
-        })
+        print(f"✅ Analysis logged to '{sheet.title}' -> 'Analysis' (Row 3, Formatting Applied)")
 
-        # 1. Formatting for Column A (Timestamp) - Font Size 7
-        final_requests.append({
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"❌ Failed to log analysis summary: {e}")
+
+def apply_sheet_formatting(ws, headers_r2_final):
+    """
+    Applies all structural formatting, styling, and conditional formatting to the Analysis sheet.
+    Can be called standalone to update layout without re-running data logic.
+    """
+    
+    # Collect ALL formatting and CF requests into a single batch_update
+    final_requests = []
+    
+    # 1. Hide Timestamp Column
+    final_requests.append({
+        "updateDimensionProperties": {
+            "range": {"sheetId": ws.id, "dimension": "COLUMNS", "startIndex": 0, "endIndex": 1},
+            "properties": {"hiddenByUser": True},
+            "fields": "hiddenByUser"
+        }
+    })
+
+    # 1a. Global Row 1 Formatting (Font Size 8, Bold)
+    final_requests.append({
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 100},
+            "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 8, "bold": True}, "horizontalAlignment": "CENTER"}},
+            "fields": "userEnteredFormat(textFormat.fontSize,textFormat.bold,horizontalAlignment)"
+        }
+    })
+
+    # 1. Formatting for Column A (Timestamp) - Font Size 7
+    final_requests.append({
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 0, "endColumnIndex": 1},
+            "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 7}}},
+            "fields": "userEnteredFormat.textFormat.fontSize"
+        }
+    })
+    
+    # 2. Formatting for Column B (Strategy) - Font Size 8
+    final_requests.append({
+        "repeatCell": {
+            "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 1, "endColumnIndex": 2},
+            "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 8}}},
+            "fields": "userEnteredFormat.textFormat.fontSize"
+        }
+    })
+    
+    # 3. Static Formats (M=WinRate, N=Trades, O=PnL)
+    def get_repeat_cell_req(range_a1, cell_format, fields):
+        start, end = range_a1.split(":")
+        sr, sc = gspread.utils.a1_to_rowcol(start)
+        er, ec = gspread.utils.a1_to_rowcol(end)
+        return {
             "repeatCell": {
-                "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 0, "endColumnIndex": 1},
-                "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 7}}},
-                "fields": "userEnteredFormat.textFormat.fontSize"
+                "range": {
+                    "sheetId": ws.id,
+                    "startRowIndex": sr - 1,
+                    "endRowIndex": er,
+                    "startColumnIndex": sc - 1,
+                    "endColumnIndex": ec
+                },
+                "cell": {"userEnteredFormat": cell_format},
+                "fields": fields
             }
-        })
-        
-        # 2. Formatting for Column B (Strategy) - Font Size 8
-        final_requests.append({
-            "repeatCell": {
-                "range": {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 1, "endColumnIndex": 2},
-                "cell": {"userEnteredFormat": {"textFormat": {"fontSize": 8}}},
-                "fields": "userEnteredFormat.textFormat.fontSize"
-            }
-        })
-        
-        # 3. Static Formats (C, D, E)
-        def get_repeat_cell_req(range_a1, cell_format, fields):
-            start, end = range_a1.split(":")
-            sr, sc = gspread.utils.a1_to_rowcol(start)
-            er, ec = gspread.utils.a1_to_rowcol(end)
-            return {
-                "repeatCell": {
-                    "range": {
-                        "sheetId": ws.id,
-                        "startRowIndex": sr - 1,
-                        "endRowIndex": er,
-                        "startColumnIndex": sc - 1,
-                        "endColumnIndex": ec
-                    },
-                    "cell": {"userEnteredFormat": cell_format},
-                    "fields": fields
-                }
-            }
+        }
 
-        final_requests.append(get_repeat_cell_req("C3:C1000", 
-            {"numberFormat": {"type": "PERCENT", "pattern": "0%"}, "horizontalAlignment": "CENTER", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
-            "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
+    # Win Rate (M = Column 13)
+    final_requests.append(get_repeat_cell_req("M3:M1000", 
+        {"numberFormat": {"type": "PERCENT", "pattern": "0%"}, "horizontalAlignment": "CENTER", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
+        "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
+    
+    # Trades (N = Column 14)
+    final_requests.append(get_repeat_cell_req("N3:N1000", 
+        {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
+        "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
         
-        final_requests.append(get_repeat_cell_req("D3:D1000", 
-            {"numberFormat": {"type": "NUMBER", "pattern": "#,##0"}, "horizontalAlignment": "RIGHT", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
-            "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
-            
-        final_requests.append(get_repeat_cell_req("E3:E1000", 
-            {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
-            "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
+    # PnL (O = Column 15)
+    final_requests.append(get_repeat_cell_req("O3:O1000", 
+        {"numberFormat": {"type": "CURRENCY", "pattern": "$#,##0"}, "horizontalAlignment": "RIGHT", "backgroundColor": {"red": 0, "green": 0, "blue": 0}, "textFormat": {"foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 9}},
+        "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"))
 
-        # 3. Weekly Columns Formats & CF
-        headers_r2_final = ws.row_values(2)
-        week_pair_index = 0
-        color_a = {"red": 1.0, "green": 1.0, "blue": 1.0}
-        color_b = {"red": 0.93, "green": 0.93, "blue": 0.93}
-        color_tf = {"red": 0.95, "green": 0.97, "blue": 1.0} # Alice Blue
+    # Format Parameter Columns C-L (3-12) with centered text, light gray background
+    final_requests.append(get_repeat_cell_req("C3:L1000", 
+        {"horizontalAlignment": "CENTER", "backgroundColor": {"red": 0.95, "green": 0.95, "blue": 0.95}, "textFormat": {"fontSize": 8}},
+        "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"))
+
+    # 3. Conditional Formatting Rules
+    current_cf_index = 0
+    # Side Conditional Formatting (C = Column 3, index 2)
+    c_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 2, "endColumnIndex": 3}
+    # SHORT -> Red text
+    final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [c_range], "booleanRule": {"condition": {"type": "TEXT_EQ", "values": [{"userEnteredValue": "SHORT"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+    # LONG -> Green text
+    final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [c_range], "booleanRule": {"condition": {"type": "TEXT_EQ", "values": [{"userEnteredValue": "LONG"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+
+    # Cond Conditional Formatting (D = Column 4, index 3)
+    d_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 3, "endColumnIndex": 4}
+    # pump -> Green text
+    final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [d_range], "booleanRule": {"condition": {"type": "TEXT_EQ", "values": [{"userEnteredValue": "pump"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+    # dump -> Red text
+    final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [d_range], "booleanRule": {"condition": {"type": "TEXT_EQ", "values": [{"userEnteredValue": "dump"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+
+    # PnL Conditional Formatting (O = Column 15, index 14)
+    o_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 14, "endColumnIndex": 15}
+    final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [o_range], "booleanRule": {"condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+    final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [o_range], "booleanRule": {"condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+
+    # 3. Weekly Columns Formats & CF (start at column 28+)
+    week_pair_index = 0
+    color_a = {"red": 1.0, "green": 1.0, "blue": 1.0}
+    color_b = {"red": 0.93, "green": 0.93, "blue": 0.93}
+    color_tf = {"red": 0.95, "green": 0.97, "blue": 1.0} # Alice Blue
+    
+    for i, val in enumerate(headers_r2_final):
+        c_idx = i + 1
+        if c_idx <= 15: continue  # Skip A-O
         
-        current_cf_index = 0
-        e_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": 4, "endColumnIndex": 5}
-        final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [e_range], "booleanRule": {"condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
-        final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [e_range], "booleanRule": {"condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
-
-        for i, val in enumerate(headers_r2_final):
-            c_idx = i + 1
-            if c_idx <= 5: continue
+        # Robust Logic: If Row 2 header is "Trades" OR if c_idx is even (for TF/Weekly pairs)
+        # Actually, standardizing on Row 2 label is safer if labels are present.
+        # Pairs are (6,7), (8,9), (10,11), (12,13), (14,15), (16,17), (18,19)...
+        # Even column index (6, 8, 10...) = Trades
+        # Odd column index (7, 9, 11...) = PnL
+        
+        is_trade = (val == "Trades") or (c_idx % 2 == 0)
+        
+        # --- COLOR LOGIC ---
+        blue_hdr = {"red": 0.0, "green": 0.0, "blue": 0.8}
+        black_txt = {"red": 0.0, "green": 0.0, "blue": 0.0}
+        current_text_color = black_txt
+        
+        # P-AA: Timeframe Breakdown (Indices 16-27)
+        if 16 <= c_idx <= 27:
+            if 16 <= c_idx <= 17: # 5s
+                current_color = color_tf
+            else: # 10s, 15s, 30s, 45s, 1m
+                current_color = color_a
             
-            # Robust Logic: If Row 2 header is "Trades" OR if c_idx is even (for TF/Weekly pairs)
-            # Actually, standardizing on Row 2 label is safer if labels are present.
-            # Pairs are (6,7), (8,9), (10,11), (12,13), (14,15), (16,17), (18,19)...
-            # Even column index (6, 8, 10...) = Trades
-            # Odd column index (7, 9, 11...) = PnL
-            
-            is_trade = (val == "Trades") or (c_idx % 2 == 0)
-            
-            # --- COLOR LOGIC ---
-            # F-Q: Timeframe Breakdown (Indices 6-17) -> Alternating White/Alice Blue PAIRS
-            if 6 <= c_idx <= 17:
-                # (6,7) pair 0, (8,9) pair 1, (10,11) pair 2...
-                pair_idx = (c_idx - 6) // 2
-                current_color = color_a if pair_idx % 2 == 0 else color_tf
+            # All data cells (Row 3+) should have black text
+            current_text_color = black_txt
+        else:
+            # AB onwards: Weekly Breakdown (Indices 28+) -> Alternating White/Gray
+            if is_trade:
+                current_color = color_a if week_pair_index % 2 == 0 else color_b
+                week_pair_index += 1
             else:
-                # R onwards: Weekly Breakdown (Indices 18+) -> Alternating White/Gray
-                if is_trade:
-                    current_color = color_a if week_pair_index % 2 == 0 else color_b
-                    week_pair_index += 1
-                else:
-                    current_color = color_a if (week_pair_index - 1) % 2 == 0 else color_b
-            
-            col_range = {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
-            
-            # Formatting request
-            number_format = {"type": "NUMBER", "pattern": "#,##0"} if is_trade else {"type": "CURRENCY", "pattern": "$#,##0"}
-            
+                current_color = color_a if (week_pair_index - 1) % 2 == 0 else color_b
+        
+        col_range = {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
+        
+        # Formatting request
+        number_format = {"type": "NUMBER", "pattern": "#,##0"} if is_trade else {"type": "CURRENCY", "pattern": "$#,##0"}
+        
+        final_requests.append({
+            "repeatCell": {
+                "range": col_range,
+                "cell": {
+                    "userEnteredFormat": {
+                        "numberFormat": number_format,
+                        "horizontalAlignment": "RIGHT",
+                        "backgroundColor": current_color,
+                        "textFormat": {"fontSize": 9, "foregroundColor": current_text_color}
+                    }
+                },
+                "fields": "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"
+            }
+        })
+        
+        # --- ROW 2 LABEL STYLING (Trades / PnL) ---
+        if 6 <= c_idx:
+            # Row 2 labels should always be black text
+            label_color = black_txt
+                
+            label_range = {"sheetId": ws.id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
             final_requests.append({
                 "repeatCell": {
-                    "range": col_range,
+                    "range": label_range,
                     "cell": {
                         "userEnteredFormat": {
-                            "numberFormat": number_format,
-                            "horizontalAlignment": "RIGHT",
-                            "backgroundColor": current_color,
-                            "textFormat": {"fontSize": 9}
+                            "horizontalAlignment": "CENTER",
+                            "textFormat": {"fontSize": 8, "bold": True, "foregroundColor": label_color}
                         }
                     },
-                    "fields": "userEnteredFormat(numberFormat,horizontalAlignment,backgroundColor,textFormat)"
+                    "fields": "userEnteredFormat(horizontalAlignment,textFormat)"
                 }
             })
-            
-            # --- ROW 2 LABEL STYLING (Trades / PnL) ---
-            if 6 <= c_idx:
-                # Target Row 2 for both TF and Weekly
-                # 0-indexed: Row 1 is startRowIndex 1, endRowIndex 2
-                label_range = {"sheetId": ws.id, "startRowIndex": 1, "endRowIndex": 2, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
-                final_requests.append({
-                    "repeatCell": {
-                        "range": label_range,
-                        "cell": {
-                            "userEnteredFormat": {
-                                "horizontalAlignment": "CENTER",
-                                "textFormat": {"fontSize": 8, "bold": True}
+        
+        # --- ROW 1 HEADER STYLING (TF ONLY) ---
+        if 16 <= c_idx <= 27 and val == "Trades": # val="Trades" or val="PnL" labels in Row 2, but we target Row 1 cell above it
+            # Target the Merged Header in Row 1 (e.g., "5s", "10s")
+            tf_header_range = {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx+1}
+            final_requests.append({
+                "repeatCell": {
+                    "range": tf_header_range,
+                    "cell": {
+                        "userEnteredFormat": {
+                            "horizontalAlignment": "CENTER",
+                            "textFormat": {
+                                "bold": True,
+                                "foregroundColor": blue_hdr
                             }
-                        },
-                        "fields": "userEnteredFormat(horizontalAlignment,textFormat)"
-                    }
-                })
-            
-            # --- ROW 1 HEADER STYLING (TF ONLY) ---
-            if 6 <= c_idx <= 17 and val == "Trades": # val="Trades" or val="PnL" labels in Row 2, but we target Row 1 cell above it
-                # Target the Merged Header in Row 1 (e.g., "5s", "10s")
-                # Since it's merged, we can just format the first cell of the pair.
-                tf_header_range = {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx+1}
-                final_requests.append({
-                    "repeatCell": {
-                        "range": tf_header_range,
-                        "cell": {
-                            "userEnteredFormat": {
-                                "horizontalAlignment": "CENTER",
-                                "textFormat": {
-                                    "bold": True,
-                                    "foregroundColor": {"red": 0.0, "green": 0.0, "blue": 0.8} # Dark Blue text
-                                }
-                            }
-                        },
-                        "fields": "userEnteredFormat(horizontalAlignment,textFormat)"
-                    }
-                })
-            
-            if val == "PnL":
-                pnl_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
-                final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [pnl_range], "booleanRule": {"condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
-                final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [pnl_range], "booleanRule": {"condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+                        }
+                    },
+                    "fields": "userEnteredFormat(horizontalAlignment,textFormat)"
+                }
+            })
+        
+        if val == "PnL":
+            pnl_range = {"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 1000, "startColumnIndex": c_idx-1, "endColumnIndex": c_idx}
+            final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [pnl_range], "booleanRule": {"condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0, "green": 0.6, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
+            final_requests.append({"addConditionalFormatRule": {"rule": {"ranges": [pnl_range], "booleanRule": {"condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]}, "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0, "blue": 0}, "bold": True}}}}, "index": current_cf_index}}); current_cf_index += 1
 
-        if final_requests:
-            try:
-                sheet.batch_update({"requests": final_requests})
-                print(f"✅ Successfully applied {len(final_requests)} batch updates.")
-            except Exception as b_err:
-                print(f"⚠️ Batch update warning: {b_err}")
+    # Auto-resize Column B (Strategy Name)
+    final_requests.append({
+        "autoResizeDimensions": {
+            "dimensions": {
+                "sheetId": ws.id,
+                "dimension": "COLUMNS",
+                "startIndex": 1,
+                "endIndex": 2
+            }
+        }
+    })
+
+    if final_requests:
+        ws.spreadsheet.batch_update({"requests": final_requests})
+        print(f"✅ Successfully applied {len(final_requests)} layout/formatting updates.")
                 
         try:
             ws.columns_auto_resize(0, len(headers_r2_final))
         except: pass
         
-        print(f"✅ Analysis logged to '{sheet.title}' -> 'Analysis' (Row 3, Optimized Batch Updates)")
+        print(f"✅ Analysis logged to '{ws.spreadsheet.title}' -> 'Analysis' (Row 3, Optimized Batch Updates)")
 
-    except Exception as e:
-        print(f"❌ Failed to log analysis summary: {e}")
-        
-        # SKIP CF UPDATE DURING BATCH RUN TO SAVE QUOTA
-        # We will run reset_and_apply_all.py at the end manually
-        # if cf_requests:
-        #    try:
-        #        sheet.batch_update({"requests": cf_requests})
-        #    except Exception: pass
-
-    except Exception as e:
-        print(f"❌ Failed to log analysis summary: {e}")

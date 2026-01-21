@@ -2,8 +2,13 @@
 Vektörel EMA + Pump + Marubozu Stratejisi
 ==========================================
 Bu sınıf, piyasa verilerini vektörel (toplu) şekilde işleyerek hızlı backtest yapılmasını sağlar.
-Giriş sinyalleri (Pump/Dump), Marubozu mum yapısı ve opsiyonel EMA filtresi ile belirlenir.
-Sinyal yönü (LONG/SHORT) ve tetikleyici (PUMP/DUMP) birbirinden tamamen bağımsızdır.
+
+GELECEKTEKİ AGENTLAR İÇİN KRİTİK KURALLAR (USER DIRECTIVE):
+1. Google Sheets API kararlılığı için toplu deneyler (batch) her zaman sıralı (sequential) yürütülmelidir. 
+2. Tek bir backtest koşturulurken pairlar 8 çekirdek ile paralel işlenmelidir (Hız için).
+3. Strateji hesaplamaları Pandas kütüphanesi ile vektörel yapılmalıdır.
+4. SIDES (LONG/SHORT) ve TRIGGER CONDITIONS (PUMP/DUMP) tamamen bağımsızdır.
+5. Google Sheets loglarına 'VECTORIZED' kelimesi yazılmamalıdır.
 """
 
 from backtest_framework import Strategy
