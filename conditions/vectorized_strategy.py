@@ -108,6 +108,9 @@ class VectorizedStrategy(Strategy):
                 needed_periods = [300, 500, 1000, 2000, 5000]
             elif "all" in self.ema:
                 needed_periods = self.periods # [9...5000]
+            elif "big_" in self.ema and "_small_" in self.ema:
+                # Need both segments
+                needed_periods = self.periods # Simplest is to calculate all for hybrids
             
             # Eğer EMA gerekliyse hesapla
             if needed_periods:
@@ -149,6 +152,22 @@ class VectorizedStrategy(Strategy):
                     ema_filter = check_chain_optimized(needed_periods, True)
                 elif self.ema == "big_bear":
                     ema_filter = check_chain_optimized(needed_periods, False)
+                elif "big_" in self.ema and "_small_" in self.ema:
+                    # Hybrid EMA: big_bull_small_bear, big_bear_small_bull etc.
+                    # Parse filters
+                    parts = self.ema.split('_') # ['big', 'bull', 'small', 'bear']
+                    big_side = parts[1]
+                    small_side = parts[3]
+                    
+                    # Calculate Big Segments (300-5000)
+                    big_periods = [300, 500, 1000, 2000, 5000]
+                    big_filter = check_chain_optimized(big_periods, big_side == "bull")
+                    
+                    # Calculate Small Segments (9-200)
+                    small_periods = [9, 20, 50, 100, 200]
+                    small_filter = check_chain_optimized(small_periods, small_side == "bull")
+                    
+                    ema_filter = big_filter & small_filter
             
             # Eğer filtre hesaplanmadıysa (none veya hata), hepsi True
             if ema_filter is None:

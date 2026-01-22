@@ -38,11 +38,90 @@ def update_layout():
         sheet = client.open_by_key(sheet_id)
         print(f"✅ Opened Sheet: {sheet.title}")
         
-        ws = sheet.worksheet("Analysis")
-        print(f"✅ Opened 'Analysis' tab")
+        ws = sheet.worksheet("backtest1")
+        print(f"✅ Opened 'backtest1' tab")
         
+        # --- EMOJI UPDATE FOR EMA COLUMN (Column E) ---
+        print("🟢 Adding emojis and normalizing EMA column...")
+        ema_col_values = ws.col_values(5)[2:] # Column E, from Row 3
+        if ema_col_values:
+            ema_emoji_map = {
+                "big_bull": "🟢🟢",
+                "big_bear": "🔴🔴",
+                "all_bull": "🟢🟢🟢",
+                "all_bear": "🔴🔴🔴",
+                "small_bull": "🟢",
+                "small_bear": "🔴",
+                "none": "⚪",
+                "big_bull_small_bear": "🟢🟢🔴",
+                "big_bear_small_bull": "🔴🔴🟢"
+            }
+            new_ema_values = []
+            for val in ema_col_values:
+                # Extract the base text (e.g., "small_bull_big_bull" from "⚪ small_bull_big_bull")
+                clean_val = val.split()[-1].lower() if " " in val else val.lower()
+                
+                # Normalize: Redundant combos to 'all_*'
+                clean_val = clean_val.replace("big_bull_small_bull", "all_bull")
+                clean_val = clean_val.replace("big_bear_small_bear", "all_bear")
+                clean_val = clean_val.replace("small_bull_big_bull", "all_bull")
+                clean_val = clean_val.replace("small_bear_big_bear", "all_bear")
+                
+                # Normalize: Big First for cross combos
+                clean_val = clean_val.replace("small_bear_big_bull", "big_bull_small_bear")
+                clean_val = clean_val.replace("small_bull_big_bear", "big_bear_small_bull")
+                
+                if clean_val in ema_emoji_map:
+                    emoji = ema_emoji_map[clean_val]
+                    new_val = f"{emoji} {clean_val}"
+                    new_ema_values.append([new_val])
+                else:
+                    new_ema_values.append([val])
+            
+            # Batch update Column E
+            if new_ema_values:
+                ws.update(values=new_ema_values, range_name=f"E3:E{2 + len(new_ema_values)}", value_input_option='USER_ENTERED')
+                print(f"✅ Updated {len(new_ema_values)} EMA entries (Emojis + Normalization).")
+
+        # --- NORMALIZE PUMP (Col F) & DUMP (Col G) FOR DROPDOWN COMPATIBILITY ---
+        # Dropdowns are "1.0", "2.0"... but existing data might be "1", "2".
+        print("🟢 Normalizing Pump/Dump columns for data validation...")
+        
+        # Normalize Pump (Col 6 -> F)
+        pump_col = ws.col_values(6)[2:] # Skip 2 headers
+        new_pump_values = []
+        for val in pump_col:
+            try:
+                # Force 1 decimal place "2" -> "2.0", "2.5" -> "2.5"
+                new_pump_values.append([f"{float(val):.1f}"])
+            except:
+                new_pump_values.append([val])
+        if new_pump_values:
+            ws.update(range_name=f"F3:F{2 + len(new_pump_values)}", values=new_pump_values, value_input_option='USER_ENTERED')
+            
+        # Normalize Dump (Col 7 -> G)
+        dump_col = ws.col_values(7)[2:] # Skip 2 headers
+        new_dump_values = []
+        for val in dump_col:
+            try:
+                new_dump_values.append([f"{float(val):.1f}"])
+            except:
+                new_dump_values.append([val])
+        if new_dump_values:
+            ws.update(range_name=f"G3:G{2 + len(new_dump_values)}", values=new_dump_values, value_input_option='USER_ENTERED')
+
+        print("✅ Normalized Pump/Dump values.")
+
+        # Force fix L2:N2 headers (Win Rate, Trades, PnL)
+        # Because previous code wrote them to M2:O2
+        print("🔧 Fixing L2:N2 headers...")
+        ws.update(range_name="L2:N2", values=[["Win Rate", "Trades", "PnL ($)"]], value_input_option='USER_ENTERED')
+
         # Get Headers to determine column types
         headers_r2 = ws.row_values(2)
+        
+        print("🎨 Refreshing Dropdowns...")
+        sheets.apply_data_validation(ws)
         
         print("🎨 Applying formatting rules...")
         sheets.apply_sheet_formatting(ws, headers_r2)

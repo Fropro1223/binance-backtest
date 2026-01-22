@@ -1,0 +1,2769 @@
+[
+  {
+    "updateDimensionProperties": {
+      "range": {
+        "sheetId": 11477984,
+        "dimension": "COLUMNS",
+        "startIndex": 0,
+        "endIndex": 1
+      },
+      "properties": {
+        "hiddenByUser": true
+      },
+      "fields": "hiddenByUser"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 0,
+        "endColumnIndex": 100
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "textFormat": {
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.textFormat.foregroundColor"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 1,
+        "endColumnIndex": 2
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "textFormat": {
+            "fontSize": 8,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.textFormat.fontSize,userEnteredFormat.textFormat.foregroundColor"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 11,
+        "endColumnIndex": 12
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "PERCENT",
+            "pattern": "0%"
+          },
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 12,
+        "endColumnIndex": 13
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 13,
+        "endColumnIndex": 14
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 2,
+        "endColumnIndex": 3
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.95,
+            "blue": 0.95
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 3,
+        "endColumnIndex": 4
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 4,
+        "endColumnIndex": 5
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.95,
+            "blue": 0.95
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 5,
+        "endColumnIndex": 6
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 6,
+        "endColumnIndex": 7
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.95,
+            "blue": 0.95
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 7,
+        "endColumnIndex": 8
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 8,
+        "endColumnIndex": 9
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.95,
+            "blue": 0.95
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 9,
+        "endColumnIndex": 10
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 10,
+        "endColumnIndex": 11
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.95,
+            "blue": 0.95
+          },
+          "textFormat": {
+            "fontSize": 8
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 5,
+        "endColumnIndex": 6
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "LEFT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 6
+          }
+        }
+      },
+      "fields": "userEnteredFormat(horizontalAlignment,backgroundColor,textFormat)"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 2,
+        "endRowIndex": 1000,
+        "startColumnIndex": 4,
+        "endColumnIndex": 5
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "0.0"
+          },
+          "horizontalAlignment": "CENTER",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.95,
+            "blue": 0.95
+          },
+          "textFormat": {
+            "fontSize": 8,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 2,
+            "endColumnIndex": 3
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "TEXT_EQ",
+            "values": [
+              {
+                "userEnteredValue": "SHORT"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 0
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 2,
+            "endColumnIndex": 3
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "TEXT_EQ",
+            "values": [
+              {
+                "userEnteredValue": "LONG"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 1
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 3,
+            "endColumnIndex": 4
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "TEXT_EQ",
+            "values": [
+              {
+                "userEnteredValue": "pump"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 2
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 3,
+            "endColumnIndex": 4
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "TEXT_EQ",
+            "values": [
+              {
+                "userEnteredValue": "dump"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 3
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 13,
+            "endColumnIndex": 14
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 4
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 13,
+            "endColumnIndex": 14
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 5
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 4,
+            "endColumnIndex": 5
+          }
+        ],
+        "gradientRule": {
+          "minpoint": {
+            "color": {
+              "red": 1.0,
+              "green": 0.0,
+              "blue": 0.0
+            },
+            "type": "MIN"
+          },
+          "maxpoint": {
+            "color": {
+              "red": 0.0,
+              "green": 0.8,
+              "blue": 0.0
+            },
+            "type": "MAX"
+          },
+          "midpoint": {
+            "color": {
+              "red": 1.0,
+              "green": 1.0,
+              "blue": 1.0
+            },
+            "type": "NUMBER",
+            "value": "0"
+          }
+        }
+      },
+      "index": 0
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 6,
+            "endColumnIndex": 7
+          }
+        ],
+        "gradientRule": {
+          "minpoint": {
+            "color": {
+              "red": 0.9,
+              "green": 1.0,
+              "blue": 0.9
+            },
+            "type": "MIN"
+          },
+          "maxpoint": {
+            "color": {
+              "red": 0.1,
+              "green": 0.7,
+              "blue": 0.2
+            },
+            "type": "MAX"
+          }
+        }
+      },
+      "index": 0
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 7,
+            "endColumnIndex": 8
+          }
+        ],
+        "gradientRule": {
+          "minpoint": {
+            "color": {
+              "red": 1.0,
+              "green": 0.9,
+              "blue": 0.9
+            },
+            "type": "MIN"
+          },
+          "maxpoint": {
+            "color": {
+              "red": 0.8,
+              "green": 0.0,
+              "blue": 0.0
+            },
+            "type": "MAX"
+          }
+        }
+      },
+      "index": 0
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 11,
+            "endColumnIndex": 12
+          }
+        ],
+        "gradientRule": {
+          "minpoint": {
+            "color": {
+              "red": 0.98,
+              "green": 0.82,
+              "blue": 0.82
+            },
+            "type": "MIN"
+          },
+          "midpoint": {
+            "color": {
+              "red": 1.0,
+              "green": 1.0,
+              "blue": 1.0
+            },
+            "type": "PERCENTILE",
+            "value": "50"
+          },
+          "maxpoint": {
+            "color": {
+              "red": 0.85,
+              "green": 0.94,
+              "blue": 0.85
+            },
+            "type": "MAX"
+          }
+        }
+      },
+      "index": 0
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 12,
+            "endColumnIndex": 13
+          }
+        ],
+        "gradientRule": {
+          "minpoint": {
+            "color": {
+              "red": 1.0,
+              "green": 1.0,
+              "blue": 1.0
+            },
+            "type": "MIN"
+          },
+          "maxpoint": {
+            "color": {
+              "red": 0.85,
+              "green": 0.9,
+              "blue": 1.0
+            },
+            "type": "MAX"
+          }
+        }
+      },
+      "index": 0
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 13,
+            "endColumnIndex": 14
+          }
+        ],
+        "gradientRule": {
+          "minpoint": {
+            "color": {
+              "red": 0.98,
+              "green": 0.82,
+              "blue": 0.82
+            },
+            "type": "MIN"
+          },
+          "midpoint": {
+            "color": {
+              "red": 1.0,
+              "green": 1.0,
+              "blue": 1.0
+            },
+            "type": "NUMBER",
+            "value": "0"
+          },
+          "maxpoint": {
+            "color": {
+              "red": 0.85,
+              "green": 0.94,
+              "blue": 0.85
+            },
+            "type": "MAX"
+          }
+        }
+      },
+      "index": 0
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 14,
+        "endColumnIndex": 15
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.97,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 14,
+        "endColumnIndex": 15
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1,
+        "startColumnIndex": 14,
+        "endColumnIndex": 16
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.8
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 15,
+        "endColumnIndex": 16
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.97,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 15,
+        "endColumnIndex": 16
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 15,
+            "endColumnIndex": 16
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 6
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 15,
+            "endColumnIndex": 16
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 7
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 16,
+        "endColumnIndex": 17
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 16,
+        "endColumnIndex": 17
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1,
+        "startColumnIndex": 16,
+        "endColumnIndex": 18
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.8
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 17,
+        "endColumnIndex": 18
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 17,
+        "endColumnIndex": 18
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 17,
+            "endColumnIndex": 18
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 8
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 17,
+            "endColumnIndex": 18
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 9
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 18,
+        "endColumnIndex": 19
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.97,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 18,
+        "endColumnIndex": 19
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1,
+        "startColumnIndex": 18,
+        "endColumnIndex": 20
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.8
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 19,
+        "endColumnIndex": 20
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.97,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 19,
+        "endColumnIndex": 20
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 19,
+            "endColumnIndex": 20
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 10
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 19,
+            "endColumnIndex": 20
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 11
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 20,
+        "endColumnIndex": 21
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 20,
+        "endColumnIndex": 21
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1,
+        "startColumnIndex": 20,
+        "endColumnIndex": 22
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.8
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 21,
+        "endColumnIndex": 22
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 21,
+        "endColumnIndex": 22
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 21,
+            "endColumnIndex": 22
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 12
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 21,
+            "endColumnIndex": 22
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 13
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 22,
+        "endColumnIndex": 23
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.97,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 22,
+        "endColumnIndex": 23
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1,
+        "startColumnIndex": 22,
+        "endColumnIndex": 24
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.8
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 23,
+        "endColumnIndex": 24
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.95,
+            "green": 0.97,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 23,
+        "endColumnIndex": 24
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 23,
+            "endColumnIndex": 24
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 14
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 23,
+            "endColumnIndex": 24
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 15
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 24,
+        "endColumnIndex": 25
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 24,
+        "endColumnIndex": 25
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1,
+        "startColumnIndex": 24,
+        "endColumnIndex": 26
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.8
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 25,
+        "endColumnIndex": 26
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 25,
+        "endColumnIndex": 26
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 25,
+            "endColumnIndex": 26
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 16
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 25,
+            "endColumnIndex": 26
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 17
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 26,
+        "endColumnIndex": 27
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 26,
+        "endColumnIndex": 27
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 27,
+        "endColumnIndex": 28
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 27,
+        "endColumnIndex": 28
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 27,
+            "endColumnIndex": 28
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 18
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 27,
+            "endColumnIndex": 28
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 19
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 28,
+        "endColumnIndex": 29
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.93,
+            "green": 0.93,
+            "blue": 0.93
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 28,
+        "endColumnIndex": 29
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 29,
+        "endColumnIndex": 30
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 0.93,
+            "green": 0.93,
+            "blue": 0.93
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 29,
+        "endColumnIndex": 30
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 29,
+            "endColumnIndex": 30
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 20
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 29,
+            "endColumnIndex": 30
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 21
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 30,
+        "endColumnIndex": 31
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 30,
+        "endColumnIndex": 31
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 0,
+        "endRowIndex": 1000,
+        "startColumnIndex": 31,
+        "endColumnIndex": 32
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "numberFormat": {
+            "type": "NUMBER",
+            "pattern": "$#,##0"
+          },
+          "horizontalAlignment": "RIGHT",
+          "backgroundColor": {
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0
+          },
+          "textFormat": {
+            "fontSize": 9,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.numberFormat,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "repeatCell": {
+      "range": {
+        "sheetId": 11477984,
+        "startRowIndex": 1,
+        "endRowIndex": 2,
+        "startColumnIndex": 31,
+        "endColumnIndex": 32
+      },
+      "cell": {
+        "userEnteredFormat": {
+          "horizontalAlignment": "CENTER",
+          "textFormat": {
+            "fontSize": 8,
+            "bold": true,
+            "foregroundColor": {
+              "red": 0.0,
+              "green": 0.0,
+              "blue": 0.0
+            }
+          }
+        }
+      },
+      "fields": "userEnteredFormat.horizontalAlignment,userEnteredFormat.textFormat"
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 31,
+            "endColumnIndex": 32
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_GREATER",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0,
+                "green": 0.6,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 22
+    }
+  },
+  {
+    "addConditionalFormatRule": {
+      "rule": {
+        "ranges": [
+          {
+            "sheetId": 11477984,
+            "startRowIndex": 2,
+            "endRowIndex": 1000,
+            "startColumnIndex": 31,
+            "endColumnIndex": 32
+          }
+        ],
+        "booleanRule": {
+          "condition": {
+            "type": "NUMBER_LESS",
+            "values": [
+              {
+                "userEnteredValue": "0"
+              }
+            ]
+          },
+          "format": {
+            "textFormat": {
+              "foregroundColor": {
+                "red": 0.8,
+                "green": 0,
+                "blue": 0
+              },
+              "bold": true
+            }
+          }
+        }
+      },
+      "index": 23
+    }
+  },
+  {
+    "autoResizeDimensions": {
+      "dimensions": {
+        "sheetId": 11477984,
+        "dimension": "COLUMNS",
+        "startIndex": 0,
+        "endIndex": 52
+      }
+    }
+  }
+]
