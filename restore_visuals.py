@@ -74,7 +74,7 @@ def restore_visuals():
         }
     })
 
-    # 5. PnL (Column N / Index 13) - Red -> White -> Green
+    # 5. Gross PnL (Column N / Index 13) - Red -> White -> Green
     requests.append({
         "addConditionalFormatRule": {
             "rule": {
@@ -88,11 +88,26 @@ def restore_visuals():
             "index": 0
         }
     })
+
+    # 6. Net PnL (Column P / Index 15) - Red -> White -> Green
+    requests.append({
+        "addConditionalFormatRule": {
+            "rule": {
+                "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": 15, "endColumnIndex": 16}],
+                "gradientRule": {
+                    "minpoint": {"color": {"red": 0.98, "green": 0.82, "blue": 0.82}, "type": "MIN"},
+                    "midpoint": {"color": {"red": 1.0, "green": 1.0, "blue": 1.0}, "type": "NUMBER", "value": "0"},
+                    "maxpoint": {"color": {"red": 0.85, "green": 0.94, "blue": 0.85}, "type": "MAX"}
+                }
+            },
+            "index": 0
+        }
+    })
     
-    # 6. Basic Text Styling for Headers
+    # 7. Basic Text Styling for Headers (Extended to index 80)
     requests.append({
         "repeatCell": {
-            "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 26},
+            "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 80},
             "cell": {
                 "userEnteredFormat": {
                     "textFormat": {"bold": True},

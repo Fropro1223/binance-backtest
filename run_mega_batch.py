@@ -95,8 +95,9 @@ def calculate_weekly_stats(results):
     weekly_stats = []
     # Just need enough weeks to cover 90 days (approx 13-14)
     for i in range(15):
-        ws = current_sun_03 - pd.Timedelta(days=7*(i+1))
+        ws = current_sun_03 - pd.Timedelta(days=7*i)  # Fixed: was 7*(i+1)
         we = ws + pd.Timedelta(days=7)
+
         
         mask = (results['entry_time'] >= ws) & (results['entry_time'] < we)
         week_trades = results[mask]
