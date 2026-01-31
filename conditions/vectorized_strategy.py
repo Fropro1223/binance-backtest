@@ -102,15 +102,15 @@ class VectorizedStrategy(Strategy):
             needed_periods = []
             if self.ema == "none":
                 needed_periods = []
+            elif "big_" in self.ema and "_small_" in self.ema:
+                # Hybrid EMA: big_bull_small_bear, big_bear_small_bull etc.
+                needed_periods = self.periods # All periods [9...5000]
+            elif "all" in self.ema:
+                needed_periods = self.periods # All periods [9...5000]
             elif "small" in self.ema:
                 needed_periods = [9, 20, 50, 100, 200]
             elif "big" in self.ema:
                 needed_periods = [300, 500, 1000, 2000, 5000]
-            elif "all" in self.ema:
-                needed_periods = self.periods # [9...5000]
-            elif "big_" in self.ema and "_small_" in self.ema:
-                # Need both segments
-                needed_periods = self.periods # Simplest is to calculate all for hybrids
             
             # Eğer EMA gerekliyse hesapla
             if needed_periods:

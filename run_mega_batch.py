@@ -69,51 +69,6 @@ def save_progress(index):
     with open(PROGRESS_FILE, 'w') as f:
         json.dump({"completed_index": index, "last_updated": str(datetime.now())}, f)
 
-def calculate_weekly_stats(results):
-    """Simplified version of main.py's weekly logic."""
-    if results.empty:
-        return [], ""
-    
-    results['entry_time'] = pd.to_datetime(results['entry_time'])
-    if results['entry_time'].dt.tz is None:
-        results['entry_time'] = results['entry_time'].dt.tz_localize('UTC').dt.tz_convert('Europe/Istanbul')
-    else:
-        results['entry_time'] = results['entry_time'].dt.tz_convert('Europe/Istanbul')
-
-    # Anchor logic for Sunday 03:00 (Europe/Istanbul)
-    # This is a bit complex to replicate perfectly, let's use a simpler version
-    # matching the 90 day window.
-    
-    today = pd.Timestamp.now(tz='Europe/Istanbul')
-    current_sun_03 = today.replace(hour=3, minute=0, second=0, microsecond=0)
-    while current_sun_03.weekday() != 6:
-         current_sun_03 -= pd.Timedelta(days=1)
-    
-    if today.weekday() == 6 and today.hour < 3:
-         current_sun_03 -= pd.Timedelta(days=7)
-
-    weekly_stats = []
-    # Just need enough weeks to cover 90 days (approx 13-14)
-    for i in range(15):
-        ws = current_sun_03 - pd.Timedelta(days=7*i)  # Fixed: was 7*(i+1)
-        we = ws + pd.Timedelta(days=7)
-
-        
-        mask = (results['entry_time'] >= ws) & (results['entry_time'] < we)
-        week_trades = results[mask]
-        
-        label = f"{ws.strftime('%d/%m')}-{we.strftime('%d/%m')}"
-        week_num = ws.isocalendar()[1]
-        
-        weekly_stats.append({
-            'label': label,
-            'week_num': week_num,
-            'trades': len(week_trades),
-            'pnl': week_trades['pnl_usd'].sum()
-        })
-    
-    overall_date_range = f"({(today - pd.Timedelta(days=90)).strftime('%d.%m')}-{today.strftime('%d.%m')})"
-    return weekly_stats, overall_date_range
 
 def run_mega_batch():
     if not os.path.exists(DATA_ROOT):
@@ -158,7 +113,7 @@ def run_mega_batch():
                 cond=cond,
                 ema=ema,
                 parallel=True,
-                workers=8
+                workers=2
             )
 
             if results is None or results.empty:
@@ -173,7 +128,9 @@ def run_mega_batch():
             total_pnl = results['pnl_usd'].sum()
             avg_pnl = results['pnl_usd'].mean()
             
-            weekly_stats, date_range = calculate_weekly_stats(results)
+            # Skip weekly stats
+            date_range = f"({(pd.Timestamp.now() - pd.Timedelta(days=90)).strftime('%d.%m')}-{pd.Timestamp.now().strftime('%d.%m')})"
+            weekly_stats = []
             
             # Timeframe Breakdown
             results['tf'] = results['symbol'].apply(lambda x: x.split('_')[-1] if '_' in x else 'Unknown')

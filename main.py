@@ -96,8 +96,7 @@ def parse_args():
                         help='Timeframe filtresi (orn: 45s, 30s, 15s). Belirtilmezse tümü kullanılır.')
 
     parser.add_argument('--ema', type=str, default='none', 
-                        choices=['all_bull', 'all_bear', 'small_bull', 'small_bear', 'big_bull', 'big_bear', 'none'],
-                        help='EMA: all_bull/all_bear (9-5000), small_bull/small_bear (9-200), big_bull/big_bear (300-5000), none')
+                        help='EMA: all_bull, all_bear, small_bull, small_bear, big_bull, big_bear, big_bear_small_bull, etc. (varsayılan: none)')
     
     return parser.parse_args()
 
@@ -224,154 +223,24 @@ def main():
     print(f"\n💾 Saving results to {results_csv}...")
     results.to_csv(results_csv, index=False)
     
-    # === WEEKLY BREAKDOWN ===
-    print("📅 Calculating Weekly Stats (Sunday 03:00 - Sunday 03:00)...")
-    overall_date_range = ""
+    # Weekly stats skipped
     weekly_stats = []
-    tf_breakdown = {} # New breakdown dict
-    
-    try:
-        if not results.empty:
-            # ----------------------------------------------------
-            # 1. TIMEFRAME BREAKDOWN CALCULATION
-            # ----------------------------------------------------
-            # Assuming symbol format: COIN_TF (e.g., BTCUSDT_5s)
-            # Extract TF from symbol
-            results['tf'] = results['symbol'].apply(lambda x: x.split('_')[-1] if '_' in x else 'Unknown')
-            
-            # Group by TF
-            tf_groups = results.groupby('tf')
-            total_trades_all = len(results)
-            total_pnl_all = results['pnl_usd'].sum()
-            
-            print("\n📊 Timeframe Breakdown:")
-            for tf, group in tf_groups:
-                tf_trades = len(group)
-                tf_pnl = group['pnl_usd'].sum()
-                
-                # Calculate percentages
-                tr_pct = (tf_trades / total_trades_all) # Percentage 0-1
-                pnl_pct = (tf_pnl / total_pnl_all) if total_pnl_all != 0 else 0
-                
-                tf_breakdown[tf] = {
-                    'trades': tf_trades,
-                    'pnl': tf_pnl,
-                    'trades_pct': tr_pct,
-                    'pnl_pct': pnl_pct
-                }
-                print(f"   {tf}: {tf_trades} ({tr_pct:.1%}) | ${tf_pnl:.2f} ({pnl_pct:.1%})")
-                
-            # ----------------------------------------------------
-            # 2. WEEKLY STATS CALCULATION
-            # ----------------------------------------------------
-            # Ensure results['entry_time'] is timezone aware (Europe/Istanbul)
-            # It comes as object or datetime64[ns] (UTC usually from stored parquet or naive)
-            # First convert to datetime
-            results['entry_time'] = pd.to_datetime(results['entry_time'])
-            
-            # If naive, assume UTC and convert. If already aware, convert.
-            if results['entry_time'].dt.tz is None:
-                results['entry_time'] = results['entry_time'].dt.tz_localize('UTC').dt.tz_convert('Europe/Istanbul')
-            else:
-                results['entry_time'] = results['entry_time'].dt.tz_convert('Europe/Istanbul')
-
-            # Use fixed 90 days lookback to show ALL weeks
-            end_timestamp = pd.Timestamp.now(tz='Europe/Istanbul')
-            start_timestamp = end_timestamp - pd.Timedelta(days=90)
-            
-            overall_date_range = f"({start_timestamp.strftime('%d.%m')}-{end_timestamp.strftime('%d.%m')})"
-            
-            # --- ROBUST MANUAL BINNING ---
-            # 1. Define Week Anchors (Sunday 03:00 UTC+3)
-            # Find the next Sunday 03:00 from start_timestamp
-            days_until_sunday = (6 - start_timestamp.weekday()) % 7
-            # If today is Sunday and before 03:00, it belongs to previous week.
-            # But let's just create a grid and filter.
-            
-            # Current Sunday 03:00 relative to end_timestamp
-            days_since_sunday = (end_timestamp.weekday() + 1) % 7 
-            # If today is Sunday, weekday is 6. (6+1)%7 = 0.
-            
-            # Let's align to the most recent Sunday 03:00 that has passed or is today
-            # Actually we want "Week Ending".
-            # Let's generate a list of Week Starts (Sundays 03:00) going back 13 weeks.
-            
-            # Find Next Sunday 03:00 from "Now" to start going backwards?
-            # Or just take "Now" and find the last Sunday 03:00.
-            
-            # Anchor: Last Sunday 03:00
-            today = pd.Timestamp.now(tz='Europe/Istanbul')
-            # normalized to 03:00
-            current_sun_03 = today.replace(hour=3, minute=0, second=0, microsecond=0)
-            while current_sun_03.weekday() != 6: # 6 is Sunday
-                 current_sun_03 -= pd.Timedelta(days=1)
-            
-            # If we are before 03:00 on Sunday, the cycle belongs to prev week?
-            # TradingView week starts Sunday 03:00.
-            # So if now is Sunday 02:00, we are in the week that started LAST Sunday.
-            if today.weekday() == 6 and today.hour < 3:
-                 current_sun_03 -= pd.Timedelta(days=7)
-
-            # Generate last 15 week STARTS
-            week_starts = []
-            for i in range(15):
-                ws = current_sun_03 - pd.Timedelta(days=7*i)
-                week_starts.append(ws)
-            
-            # Sort old to new for processing label
-            week_starts = sorted(week_starts)
-            
-            # Create Bins
-            # Bin i: [week_starts[i], week_starts[i] + 7days)
-            
-            weekly_stats = []
-            
-            for ws in week_starts:
-                we = ws + pd.Timedelta(days=7)
-                
-                # Skip future weeks
-                if ws > today:
-                    continue
-                    
-                # Filter trades in this range
-                mask = (results['entry_time'] >= ws) & (results['entry_time'] < we)
-                week_trades = results[mask]
-                
-                # Format Label
-                # Label typically shows Week END? or Range?
-                # User likes: "11.01-18.01" (Start-End)
-                w_start_str = ws.strftime('%d/%m')
-                w_end_str = we.strftime('%d/%m')
-                week_num = ws.isocalendar()[1]
-                label = f"{w_start_str}-{w_end_str}"
-                
-                weekly_stats.append({
-                    'label': label,
-                    'week_num': week_num,
-                    'trades': len(week_trades),
-                    'pnl': week_trades['pnl_usd'].sum()
-                })
-            
-            # Reverse for display (Newest first)
-            weekly_stats = weekly_stats[::-1]
-
-    except Exception as e:
-        print(f"⚠️ Error calculating stats: {e}")
-        import traceback
-        traceback.print_exc()
-
-    # Print Weekly Stats Table
-    if weekly_stats:
-        print("\n📅 WEEKLY BREAKDOWN (Sunday 03:00 UTC+3)")
-        print(f"{'Week Range':<15} | {'Trades':<8} | {'PnL ($)':<12}")
-        print("-" * 41)
-        for w in weekly_stats:
-            print(f"{w['label']:<15} | {w['trades']:<8} | ${w['pnl']:<12.2f}")
-        print("-" * 41)
 
     # === GOOGLE SHEETS LOGGING ===
     if not args.no_sheets:
         print("☁️  Logging Analysis to Google Sheets...")
+        
+        # Calculate missing variables
+        # Convert entry_time to datetime if it's string
+        if not results.empty:
+            results['entry_time'] = pd.to_datetime(results['entry_time'])
+            overall_date_range = f"{results['entry_time'].min().strftime('%Y-%m-%d')} to {results['entry_time'].max().strftime('%Y-%m-%d')}"
+        else:
+            overall_date_range = "N/A"
+        tf_breakdown = results.groupby('symbol').agg({'pnl_usd': 'sum'}).to_dict() if not results.empty else {}
+        
+        # Calculate actual days from data
+        actual_days = (results['entry_time'].max() - results['entry_time'].min()).days + 1 if not results.empty else 0
         
         summary_data = {
             'strategy_name': STRATEGY_NAME_LOG,
@@ -388,8 +257,8 @@ def main():
             'worst_trade': results['pnl_usd'].min(),
             'date_range': overall_date_range,
             'weekly_stats': weekly_stats,
-            'tf_breakdown': tf_breakdown,  # Pass this to sheets
-            'total_days': 90 # Standard lookback
+            'tf_breakdown': tf_breakdown,
+            'total_days': actual_days
         }
         
         try:

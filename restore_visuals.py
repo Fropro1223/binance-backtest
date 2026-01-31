@@ -103,20 +103,63 @@ def restore_visuals():
             "index": 0
         }
     })
+
+    # 7. Timeframe PnL Columns (R, T, V, X, Z, AB)
+    for col_idx in [17, 19, 21, 23, 25, 27]:
+        # Background Gradient
+        requests.append({
+            "addConditionalFormatRule": {
+                "rule": {
+                    "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": col_idx, "endColumnIndex": col_idx + 1}],
+                    "gradientRule": {
+                        "minpoint": {"color": {"red": 0.98, "green": 0.82, "blue": 0.82}, "type": "MIN"},
+                        "midpoint": {"color": {"red": 1.0, "green": 1.0, "blue": 1.0}, "type": "NUMBER", "value": "0"},
+                        "maxpoint": {"color": {"red": 0.85, "green": 0.94, "blue": 0.85}, "type": "MAX"}
+                    }
+                },
+                "index": 0
+            }
+        })
+        # Green Text (>0)
+        requests.append({
+            "addConditionalFormatRule": {
+                "rule": {
+                    "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": col_idx, "endColumnIndex": col_idx+1}],
+                    "booleanRule": {
+                        "condition": {"type": "NUMBER_GREATER", "values": [{"userEnteredValue": "0"}]},
+                        "format": {"textFormat": {"foregroundColor": {"red": 0.0, "green": 0.6, "blue": 0.0}, "bold": True}}
+                    }
+                },
+                "index": 0
+            }
+        })
+        # Red Text (<0)
+        requests.append({
+            "addConditionalFormatRule": {
+                "rule": {
+                    "ranges": [{"sheetId": ws.id, "startRowIndex": 2, "endRowIndex": 2000, "startColumnIndex": col_idx, "endColumnIndex": col_idx+1}],
+                    "booleanRule": {
+                        "condition": {"type": "NUMBER_LESS", "values": [{"userEnteredValue": "0"}]},
+                        "format": {"textFormat": {"foregroundColor": {"red": 0.8, "green": 0.0, "blue": 0.0}, "bold": True}}
+                    }
+                },
+                "index": 0
+            }
+        })
     
-    # 7. Basic Text Styling for Headers (Extended to index 80)
+    # 8. Basic Text Styling for Headers (Extended to index 80) - APPLY LAST
     requests.append({
         "repeatCell": {
             "range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 2, "startColumnIndex": 0, "endColumnIndex": 80},
             "cell": {
                 "userEnteredFormat": {
-                    "textFormat": {"bold": True},
+                    "textFormat": {"fontSize": 6, "bold": True},
                     "horizontalAlignment": "CENTER",
                     "verticalAlignment": "MIDDLE",
                     "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9}
                 }
             },
-            "fields": "userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment,backgroundColor)"
+            "fields": "userEnteredFormat.textFormat.fontSize,userEnteredFormat.textFormat.bold,userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.backgroundColor"
         }
     })
 

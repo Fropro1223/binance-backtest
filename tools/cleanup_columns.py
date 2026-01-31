@@ -38,7 +38,7 @@ def cleanup_duplicate_column():
     # This will shift all subsequent columns left by 1
     
     print("🗑️ Deleting duplicate column O (5s duplicate)...")
-    
+    øø
     # Use batchUpdate to delete a column
     delete_request = {
         "requests": [
